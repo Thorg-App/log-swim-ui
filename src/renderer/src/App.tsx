@@ -1,7 +1,11 @@
+import '../theme/tokens.css'
+import '../theme/components.css'
+import DesignReferencePage from './DesignReferencePage'
+
 function App() {
   return (
-    <div style={{ backgroundColor: '#0F172A', color: '#E2E8F0', minHeight: '100vh', padding: '2rem' }}>
-      <h1>Hello, log-swim-ui</h1>
+    <div className="app-layout">
+      <DesignReferencePage />
     </div>
   )
 }

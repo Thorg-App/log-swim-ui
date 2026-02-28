@@ -142,21 +142,17 @@ describe('GIVEN a log entry with level "error"', () => {
 
 ---
 
-## CSS Best Practices
+## CSS Architecture
+
+### File Organization
+- `src/renderer/theme/tokens.css` -- All CSS custom properties (`:root`). Single source of truth for colors, spacing, typography, shadows, borders, layout, transitions.
+- `src/renderer/theme/components.css` -- Structural component classes. Zero hardcoded color/spacing values; everything references tokens via `var()`.
+- `src/renderer/theme/design-reference.css` -- Dev-only styles for the design reference page. Will be removed when real components replace the reference page.
 
 ### Custom Properties (Tokens)
 - Use CSS custom properties for all visual values (colors, spacing, borders, fonts).
-- Define tokens in a central location (e.g., `:root` or a dedicated `tokens.css`).
+- Semantic tokens reference grey-scale tokens via `var()` (e.g., `--color-surface: var(--color-grey-800)`).
 - Components reference tokens, never hardcoded values.
-
-```css
-:root {
-  --color-background: #0F172A;
-  --color-text: #E2E8F0;
-  --border-width: 2px;
-  --row-height: 32px;
-}
-```
 
 ### Border Width
 - Use `2px` borders over `1px` for visibility and accessibility.
@@ -164,7 +160,9 @@ describe('GIVEN a log entry with level "error"', () => {
 ### No Inline Styles
 - Do not use inline `style` attributes in React components for production UI.
 - Use CSS classes that reference custom property tokens.
-- Exception: the scaffold phase `App.tsx` stub uses inline styles for simplicity (to be replaced in Phase 02).
+
+### Runtime Config Override
+- `applyConfigToCSS(config)` maps `config.json` values to CSS custom properties at runtime via `document.documentElement.style.setProperty()`. Stub exists; will be wired in Phase 04.
 
 ---
 
@@ -201,6 +199,10 @@ src/
                  # - IPC channel definitions
   renderer/      # React renderer process (browser context)
     src/         # React components, hooks, styles
+    theme/       # CSS design system
+                 # - tokens.css: CSS custom properties (:root)
+                 # - components.css: Structural component classes (zero hardcoded values)
+                 # - design-reference.css: Dev-only styles for DesignReferencePage
     index.html   # HTML entry point
   core/          # Shared pure logic (no Electron or React imports)
                  # - Types, data structures
