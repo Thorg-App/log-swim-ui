@@ -333,5 +333,8 @@ $HOME/.config/log-swim-ui/config.json
 | Distribution | npm global install |
 | Package manager | npm |
 
+## Callouts
+- No callouts during 01_project_scaffold.md
+
 ## Open Questions
 - None — all requirements confirmed.
