@@ -20,7 +20,6 @@ interface ConfigColors {
 
 interface ConfigUI {
   readonly rowHeight: number
-  readonly fontFamily: string
   readonly fontSize: number
 }
 

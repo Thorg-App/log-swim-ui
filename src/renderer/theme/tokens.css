@@ -55,7 +55,7 @@
    * =================================================================== */
   --color-border:          var(--color-grey-700);
   --color-border-subtle:   var(--color-grey-800);
-  --color-border-focus:    hsl(217, 91%, 60%);
+  --color-border-focus:    var(--color-primary);
 
   /* ===================================================================
    * Semantic: Interactive
