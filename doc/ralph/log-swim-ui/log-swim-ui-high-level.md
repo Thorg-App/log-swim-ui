@@ -336,5 +336,11 @@ $HOME/.config/log-swim-ui/config.json
 ## Callouts
 - No callouts during 01_project_scaffold.md
 
+### Phase 02: UI Design Direction
+
+| WHAT | WHY-ItsCalledOut | WHY-ItWasDone |
+|------|-----------------|---------------|
+| Design memory files (`my-frontend-design.md`, parts 2-8) were not available on this system | The task explicitly instructs loading these files for design decisions. Their absence means the design system was built without the canonical UI design memory. | Design principles from the task document and high-level spec were sufficient to produce 96 tokens, component CSS, and a verified design reference page. Results should be reviewed for alignment with design memory when available. |
+
 ## Open Questions
 - None — all requirements confirmed.
