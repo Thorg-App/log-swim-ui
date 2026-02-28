@@ -230,7 +230,7 @@ out/             # Build output (gitignored)
 - `@renderer/*` maps to `src/renderer/src/*`
 - `@core/*` maps to `src/core/*`
 
-These aliases are configured in both `tsconfig.web.json` (TypeScript) and `electron.vite.config.ts` (Vite bundler).
+These aliases are configured in `tsconfig.web.json` (TypeScript), `electron.vite.config.ts` (Vite bundler), and `vitest.config.ts` (test runner).
 
 ### Import Style
 - Use named imports over default imports where possible.
