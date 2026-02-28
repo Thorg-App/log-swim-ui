@@ -249,7 +249,7 @@ None — this is a greenfield project with no existing behaviors.
 | 06 | UI - Filters, Drag & Lane Management | Global filter bar, ad-hoc lane addition, draggable lane reorder with re-classification, E2E tests |
 | 07 | Settings Panel | Slide-out settings panel, all config options editable, save to disk |
 
-See individual task file(s) in `./tasks/todo/` for details.
+See individual task file(s) in `./tasks/todo/` (pending) or `./tasks/done/` (completed) for details.
 
 ## CLI Reference
 
