@@ -5,9 +5,10 @@
  * It will be replaced when real components are built in Phase 05+.
  *
  * - No state, no hooks, no interactivity
- * - Uses CSS classes from components.css only — no inline styles
+ * - Uses CSS classes from components.css and design-reference.css — no inline styles
  * - Sections: colors, spacing, typography, shadows, borders, component sketches
  */
+import '../theme/design-reference.css'
 
 const GREY_SCALE = [
   { token: '--color-grey-50', label: 'Grey 50' },
