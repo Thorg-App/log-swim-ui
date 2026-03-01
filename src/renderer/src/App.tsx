@@ -161,18 +161,23 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
   )
 
   const handleSettingsReset = useCallback(() => {
-    void window.api.resetConfig().then((defaults) => {
-      setConfig(defaults)
-      applyConfigToCSS(defaults)
+    void window.api
+      .resetConfig()
+      .then((defaults) => {
+        setConfig(defaults)
+        applyConfigToCSS(defaults)
 
-      // Handle maxLogEntries decrease after reset
-      if (defaults.performance.maxLogEntries < masterList.length) {
-        masterList.setMaxEntries(defaults.performance.maxLogEntries)
-        bumpVersion()
-      }
+        // Handle maxLogEntries decrease after reset
+        if (defaults.performance.maxLogEntries < masterList.length) {
+          masterList.setMaxEntries(defaults.performance.maxLogEntries)
+          bumpVersion()
+        }
 
-      setSettingsOpen(false)
-    })
+        setSettingsOpen(false)
+      })
+      .catch((e: unknown) => {
+        console.error('Failed to reset config:', e)
+      })
   }, [masterList, bumpVersion])
 
   if (error !== null) {

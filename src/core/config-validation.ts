@@ -22,11 +22,4 @@ function isInRange(value: number, min: number, max: number): boolean {
   return value >= min && value <= max
 }
 
-/**
- * Valid options for the viewTimestampFormat config field.
- * Mirrors VIEW_TIMESTAMP_FORMATS from types.ts but exported from here
- * for validation convenience.
- */
-const VIEW_TIMESTAMP_FORMAT_OPTIONS = ['iso', 'local', 'relative'] as const
-
-export { isValidHexColor, isInRange, VIEW_TIMESTAMP_FORMAT_OPTIONS, HEX_COLOR_PATTERN }
+export { isValidHexColor, isInRange, HEX_COLOR_PATTERN }

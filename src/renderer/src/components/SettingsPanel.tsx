@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { AppConfig, ViewTimestampFormat } from '@core/types'
-import { KNOWN_LOG_LEVELS, CONFIG_CONSTRAINTS, DEFAULT_APP_CONFIG } from '@core/types'
-import { isValidHexColor, isInRange, VIEW_TIMESTAMP_FORMAT_OPTIONS } from '@core/config-validation'
+import { KNOWN_LOG_LEVELS, CONFIG_CONSTRAINTS, DEFAULT_APP_CONFIG, VIEW_TIMESTAMP_FORMATS } from '@core/types'
+import { isValidHexColor, isInRange } from '@core/config-validation'
 import { applyConfigToCSS } from '../applyConfigToCSS'
 
 // --- Constants ---
@@ -50,6 +50,11 @@ function validateConfig(draft: AppConfig): ValidationErrors {
     if (!isValidHexColor(value)) {
       errors[`colors.${field.key}`] = 'Invalid hex color'
     }
+  }
+
+  // Validate fontFamily
+  if (draft.ui.fontFamily.trim() === '') {
+    errors['ui.fontFamily'] = 'Required'
   }
 
   // Validate numeric UI fields
@@ -185,6 +190,7 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
           ...prev,
           ui: { ...prev.ui, fontFamily: value }
         }
+        setErrors(validateConfig(next))
         applyPreview(next)
         return next
       })
@@ -342,13 +348,14 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
         <div className="settings-panel__field">
           <label className="settings-panel__label">Font Family</label>
           <input
-            className="settings-panel__input"
+            className={`settings-panel__input${errors['ui.fontFamily'] ? ' is-error' : ''}`}
             type="text"
             value={draftConfig.ui.fontFamily}
             onChange={(e) => updateFontFamily(e.target.value)}
             placeholder="monospace"
             data-field="ui.fontFamily"
           />
+          {errors['ui.fontFamily'] && <span className="settings-panel__error">{errors['ui.fontFamily']}</span>}
         </div>
 
         <div className="settings-panel__field">
@@ -370,7 +377,7 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
         <div className="settings-panel__field">
           <label className="settings-panel__label">Timestamp Format</label>
           <div className="settings-panel__segmented">
-            {VIEW_TIMESTAMP_FORMAT_OPTIONS.map((format) => (
+            {VIEW_TIMESTAMP_FORMATS.map((format) => (
               <button
                 key={format}
                 className={`settings-panel__segmented-option${format === draftConfig.ui.viewTimestampFormat ? ' settings-panel__segmented-option--active' : ''}`}

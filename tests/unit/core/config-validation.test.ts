@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { isValidHexColor, isInRange, VIEW_TIMESTAMP_FORMAT_OPTIONS } from '@core/config-validation'
-import { CONFIG_CONSTRAINTS } from '@core/types'
+import { isValidHexColor, isInRange } from '@core/config-validation'
+import { CONFIG_CONSTRAINTS, VIEW_TIMESTAMP_FORMATS } from '@core/types'
 
 describe('isValidHexColor', () => {
   describe('GIVEN a valid 6-digit hex color', () => {
@@ -122,8 +122,8 @@ describe('isInRange', () => {
   })
 })
 
-describe('VIEW_TIMESTAMP_FORMAT_OPTIONS', () => {
+describe('VIEW_TIMESTAMP_FORMATS', () => {
   it('contains exactly iso, local, and relative', () => {
-    expect(VIEW_TIMESTAMP_FORMAT_OPTIONS).toEqual(['iso', 'local', 'relative'])
+    expect(VIEW_TIMESTAMP_FORMATS).toEqual(['iso', 'local', 'relative'])
   })
 })

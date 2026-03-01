@@ -1,4 +1,4 @@
-# IMPLEMENTOR Private Context -- Phase 7A + 7B
+# IMPLEMENTOR Private Context -- Phase 7A + 7B + Review Fixes
 
 ## Phase 7A: COMPLETE (8 steps)
 All steps as documented in previous version of this file.
@@ -22,7 +22,7 @@ Added after `.settings-panel__label`:
 - `.settings-panel__header` -- flex row for title + close button
 - `.settings-panel__title` -- panel title text
 - `.settings-panel__close-btn` -- borderless close button
-- `.settings-panel__input` -- shared mono text input (same pattern as filter-bar__input)
+- `.settings-panel__input` -- now part of shared mono text input selector; width: 100% override only
 - `.settings-panel__input--number` -- constrained width for number inputs
 - `.settings-panel__color-field` -- flex row for swatch + input
 - `.settings-panel__color-swatch` -- small colored square preview
@@ -41,7 +41,7 @@ Added after `.settings-panel__label`:
 - Added `settingsOpen` state
 - Added gear icon button `<button className="settings-trigger">` with `margin-left: auto` (CSS) and `aria-label="Settings"`
 - `handleSettingsSave`: saves to disk via IPC, updates config state, applies CSS, handles maxLogEntries eviction, closes panel
-- `handleSettingsReset`: calls `resetConfig()` IPC, updates with returned defaults, applies CSS, handles eviction, closes panel
+- `handleSettingsReset`: calls `resetConfig()` IPC, updates with returned defaults, applies CSS, handles eviction, closes panel. Has `.catch()` for error handling.
 - Renders `SettingsPanel` always (but returns null when closed) -- outside `.app-layout` to avoid layout interference
 - Renders `settings-backdrop` only when `settingsOpen` is true -- conditional rendering, no animation
 - Backdrop and panel have `data-testid` attributes for E2E selectors
@@ -53,16 +53,31 @@ Added 3 new tests in `WHEN the settings gear icon is clicked` describe block:
 2. "THEN changing a color value updates the CSS variable (live preview)" -- opens settings, fills background color `#FF0000`, waits 300ms, verifies `--color-bg` CSS var
 3. "THEN clicking the backdrop closes the settings panel" -- opens, clicks backdrop, verifies both hidden
 
-## Decisions Made
-- **Draft state LOCAL to SettingsPanel** -- per plan review blocker #2. No parent re-renders on keystrokes. Only `applyConfigToCSS` fires during preview (debounced).
-- **Props: onSave + onReset instead of onConfigChange** -- cleaner than the original plan's single `onConfigChange` approach. Save handles disk persistence + state update + eviction. Reset handles IPC call + state update.
-- **Conditional rendering (return null)** -- instead of always-render with CSS class toggle. No close animation per 80/20. Simplifies E2E testing (count=0 vs count=1).
-- **Color swatch uses inline style** -- only exception to the "no inline styles" rule, necessary for dynamic swatch preview. The backgroundColor value comes directly from user input.
-- **Gear icon as last toolbar item with margin-left: auto** -- pushes it to the right side of the toolbar naturally.
-- **data-testid attributes** -- used for E2E selectors on panel and backdrop (more stable than CSS class selectors for test purposes).
+## Review Fix Pass: COMPLETE (5 fixes)
 
-## Test Results
+### Fix 1: DRY -- HEX_COLOR_PATTERN
+- Removed local `const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/` from `src/main/config-manager.ts` (line 24)
+- Added `import { HEX_COLOR_PATTERN } from '../core/config-validation'` to imports
+- Single source of truth: `src/core/config-validation.ts`
+
+### Fix 2: DRY -- VIEW_TIMESTAMP_FORMAT_OPTIONS
+- Removed `VIEW_TIMESTAMP_FORMAT_OPTIONS` constant and its export from `src/core/config-validation.ts`
+- Updated `src/renderer/src/components/SettingsPanel.tsx`: import `VIEW_TIMESTAMP_FORMATS` from `@core/types`, use in JSX `.map()`
+- Updated `tests/unit/core/config-validation.test.ts`: import `VIEW_TIMESTAMP_FORMATS` from `@core/types`, updated describe block name
+- Single source of truth: `src/core/types.ts` `VIEW_TIMESTAMP_FORMATS`
+
+### Fix 3: Missing .catch() on resetConfig()
+- Added `.catch((e: unknown) => { console.error('Failed to reset config:', e) })` to the `void window.api.resetConfig().then(...)` chain in `handleSettingsReset` in `src/renderer/src/App.tsx`
+
+### Fix 4: fontFamily empty string validation
+- Added `if (draft.ui.fontFamily.trim() === '') { errors['ui.fontFamily'] = 'Required' }` to `validateConfig()` in SettingsPanel.tsx
+- Added `setErrors(validateConfig(next))` call in `updateFontFamily` callback
+- Added `.is-error` class toggle and error message span to fontFamily input in JSX
+
+### Fix 5: CSS input style deduplication
+- Added `.settings-panel__input` to the shared selector at line 292-314 in components.css (base, :focus, ::placeholder)
+- Replaced the full duplicate `.settings-panel__input` rule block with only the `width: 100%` override
+
+## Test Results After Fixes
 - 238 unit tests pass (16 test files) -- zero regressions
 - Typecheck clean (zero errors)
-- 14 E2E tests pass (11 existing + 3 new)
-- Build succeeds
