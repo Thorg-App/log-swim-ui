@@ -322,8 +322,9 @@ body {
   gap: 0;
 }
 
-.filter-bar__type-toggle {
-  padding: var(--space-1) var(--space-2);
+/* Shared segmented toggle style (used by filter bar type toggle, settings panel timestamp format) */
+.filter-bar__type-toggle,
+.settings-panel__segmented-option {
   background: none;
   border: var(--border-width) solid var(--color-border);
   color: var(--color-text-secondary);
@@ -335,19 +336,31 @@ body {
               color var(--transition-fast);
 }
 
-.filter-bar__type-toggle:first-child {
+.filter-bar__type-toggle:first-child,
+.settings-panel__segmented-option:first-child {
   border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
 }
 
-.filter-bar__type-toggle:last-child {
+.filter-bar__type-toggle:last-child,
+.settings-panel__segmented-option:last-child {
   border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+}
+
+.filter-bar__type-toggle:not(:first-child),
+.settings-panel__segmented-option:not(:first-child) {
   border-left: none;
 }
 
-.filter-bar__type-toggle--active {
+.filter-bar__type-toggle--active,
+.settings-panel__segmented-option--active {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-grey-50);
+}
+
+/* Component-specific padding overrides */
+.filter-bar__type-toggle {
+  padding: var(--space-1) var(--space-2);
 }
 
 /* =====================================================================
@@ -575,35 +588,9 @@ body {
   gap: 0;
 }
 
+/* Settings segmented option: padding override (shared base styles in Filter Bar section) */
 .settings-panel__segmented-option {
   padding: var(--space-1) var(--space-3);
-  background: none;
-  border: var(--border-width) solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  transition: background-color var(--transition-fast),
-              border-color var(--transition-fast),
-              color var(--transition-fast);
-}
-
-.settings-panel__segmented-option:first-child {
-  border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
-}
-
-.settings-panel__segmented-option:last-child {
-  border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
-}
-
-.settings-panel__segmented-option:not(:first-child) {
-  border-left: none;
-}
-
-.settings-panel__segmented-option--active {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-grey-50);
 }
 
 /* Actions bar (Save / Reset buttons) */

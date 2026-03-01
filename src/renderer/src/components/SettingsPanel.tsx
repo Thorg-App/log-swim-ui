@@ -166,14 +166,15 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
     [applyPreview]
   )
 
-  const updateUiNumber = useCallback(
-    (key: 'rowHeight' | 'fontSize', value: string) => {
+  /** Shared number-field updater: parses string, updates a section of draftConfig, validates, previews. */
+  const updateNumber = useCallback(
+    (section: 'ui' | 'performance', key: string, value: string) => {
       const num = parseInt(value, 10)
       if (value !== '' && isNaN(num)) return
       setDraftConfig((prev) => {
         const next: AppConfig = {
           ...prev,
-          ui: { ...prev.ui, [key]: value === '' ? 0 : num }
+          [section]: { ...prev[section], [key]: value === '' ? 0 : num }
         }
         setErrors(validateConfig(next))
         applyPreview(next)
@@ -205,23 +206,6 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
           ...prev,
           ui: { ...prev.ui, viewTimestampFormat: format }
         }
-        applyPreview(next)
-        return next
-      })
-    },
-    [applyPreview]
-  )
-
-  const updatePerformanceNumber = useCallback(
-    (key: 'flushIntervalMs' | 'maxLogEntries', value: string) => {
-      const num = parseInt(value, 10)
-      if (value !== '' && isNaN(num)) return
-      setDraftConfig((prev) => {
-        const next: AppConfig = {
-          ...prev,
-          performance: { ...prev.performance, [key]: value === '' ? 0 : num }
-        }
-        setErrors(validateConfig(next))
         applyPreview(next)
         return next
       })
@@ -339,7 +323,7 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
             min={CONFIG_CONSTRAINTS.rowHeight.min}
             max={CONFIG_CONSTRAINTS.rowHeight.max}
             value={draftConfig.ui.rowHeight}
-            onChange={(e) => updateUiNumber('rowHeight', e.target.value)}
+            onChange={(e) => updateNumber('ui', 'rowHeight', e.target.value)}
             data-field="ui.rowHeight"
           />
           {errors['ui.rowHeight'] && <span className="settings-panel__error">{errors['ui.rowHeight']}</span>}
@@ -368,7 +352,7 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
             min={CONFIG_CONSTRAINTS.fontSize.min}
             max={CONFIG_CONSTRAINTS.fontSize.max}
             value={draftConfig.ui.fontSize}
-            onChange={(e) => updateUiNumber('fontSize', e.target.value)}
+            onChange={(e) => updateNumber('ui', 'fontSize', e.target.value)}
             data-field="ui.fontSize"
           />
           {errors['ui.fontSize'] && <span className="settings-panel__error">{errors['ui.fontSize']}</span>}
@@ -405,7 +389,7 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
             min={CONFIG_CONSTRAINTS.flushIntervalMs.min}
             max={CONFIG_CONSTRAINTS.flushIntervalMs.max}
             value={draftConfig.performance.flushIntervalMs}
-            onChange={(e) => updatePerformanceNumber('flushIntervalMs', e.target.value)}
+            onChange={(e) => updateNumber('performance', 'flushIntervalMs', e.target.value)}
             data-field="performance.flushIntervalMs"
           />
           <span className="settings-panel__hint">Takes effect on restart</span>
@@ -425,7 +409,7 @@ function SettingsPanel({ isOpen, config, onSave, onReset, onClose }: SettingsPan
             min={CONFIG_CONSTRAINTS.maxLogEntries.min}
             max={CONFIG_CONSTRAINTS.maxLogEntries.max}
             value={draftConfig.performance.maxLogEntries}
-            onChange={(e) => updatePerformanceNumber('maxLogEntries', e.target.value)}
+            onChange={(e) => updateNumber('performance', 'maxLogEntries', e.target.value)}
             data-field="performance.maxLogEntries"
           />
           {errors['performance.maxLogEntries'] && (

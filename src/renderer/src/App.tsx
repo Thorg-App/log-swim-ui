@@ -143,9 +143,9 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
 
   // --- Settings handlers ---
 
-  const handleSettingsSave = useCallback(
+  /** DRY helper: apply a new config to state, CSS, eviction, and close the panel. */
+  const applyConfigChange = useCallback(
     (newConfig: AppConfig) => {
-      void window.api.saveConfig(newConfig)
       setConfig(newConfig)
       applyConfigToCSS(newConfig)
 
@@ -160,25 +160,24 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
     [masterList, bumpVersion]
   )
 
+  const handleSettingsSave = useCallback(
+    (newConfig: AppConfig) => {
+      void window.api.saveConfig(newConfig)
+      applyConfigChange(newConfig)
+    },
+    [applyConfigChange]
+  )
+
   const handleSettingsReset = useCallback(() => {
     void window.api
       .resetConfig()
       .then((defaults) => {
-        setConfig(defaults)
-        applyConfigToCSS(defaults)
-
-        // Handle maxLogEntries decrease after reset
-        if (defaults.performance.maxLogEntries < masterList.length) {
-          masterList.setMaxEntries(defaults.performance.maxLogEntries)
-          bumpVersion()
-        }
-
-        setSettingsOpen(false)
+        applyConfigChange(defaults)
       })
       .catch((e: unknown) => {
         console.error('Failed to reset config:', e)
       })
-  }, [masterList, bumpVersion])
+  }, [applyConfigChange])
 
   if (error !== null) {
     return <ErrorScreen errorType={error.type} message={error.message} />
