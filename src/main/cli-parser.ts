@@ -1,10 +1,4 @@
-// --- CLI Argument Types ---
-
-interface CliArgs {
-  readonly keyLevel: string
-  readonly keyTimestamp: string
-  readonly lanePatterns: readonly string[]
-}
+import type { CliArgsResult } from '../core/types'
 
 // --- Custom Error ---
 
@@ -49,7 +43,7 @@ class CliParser {
    * - --lanes with zero values
    * - Positional args not associated with a flag
    */
-  static parse(argv: readonly string[]): CliArgs {
+  static parse(argv: readonly string[]): CliArgsResult {
     let keyLevel: string | null = null
     let keyTimestamp: string | null = null
     let lanePatterns: string[] | null = null
@@ -141,4 +135,3 @@ class CliParser {
 }
 
 export { CliParser, CliValidationError }
-export type { CliArgs }

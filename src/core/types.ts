@@ -111,16 +111,6 @@ interface CliArgsResult {
   readonly lanePatterns: readonly string[]
 }
 
-// --- StdinMessage (IPC message type for Phase 04) ---
-
-const STDIN_MESSAGE_TYPES = ['line', 'end', 'error'] as const
-type StdinMessageType = (typeof STDIN_MESSAGE_TYPES)[number]
-
-interface StdinMessage {
-  readonly type: StdinMessageType
-  readonly data?: string // present for 'line' and 'error'
-}
-
 // --- AppConfig ---
 
 interface AppConfigColors {
@@ -194,8 +184,6 @@ export type {
   IpcLogLine,
   ElectronApi,
   CliArgsResult,
-  StdinMessageType,
-  StdinMessage,
   AppConfigColors,
   AppConfigUI,
   AppConfigPerformance,
@@ -205,7 +193,6 @@ export type {
 export {
   TIMESTAMP_FORMATS,
   VIEW_TIMESTAMP_FORMATS,
-  STDIN_MESSAGE_TYPES,
   IPC_CHANNELS,
   DEFAULT_APP_CONFIG,
   createLaneDefinition

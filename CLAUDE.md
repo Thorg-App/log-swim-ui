@@ -205,7 +205,7 @@ src/
                  # - design-reference.css: Dev-only styles for DesignReferencePage
     index.html   # HTML entry point
   core/          # Shared pure logic (no Electron or React imports)
-                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, StdinMessage
+                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS, ElectronApi, CliArgsResult
                  # - json-parser.ts: JsonParser (static) -- raw string → ParsedLine
                  # - timestamp-detector.ts: TimestampDetector -- detect/lock format, parse timestamps
                  # - lane-classifier.ts: LaneClassifier (static) -- first-match-wins classification

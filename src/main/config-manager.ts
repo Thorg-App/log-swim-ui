@@ -70,16 +70,8 @@ class ConfigValidator {
   }
 
   private static validateUI(errors: string[], ui: Record<string, unknown>): void {
-    if ('rowHeight' in ui) {
-      if (typeof ui['rowHeight'] !== 'number' || ui['rowHeight'] <= 0) {
-        errors.push(`ui.rowHeight: expected positive number, got "${String(ui['rowHeight'])}"`)
-      }
-    }
-    if ('fontSize' in ui) {
-      if (typeof ui['fontSize'] !== 'number' || ui['fontSize'] <= 0) {
-        errors.push(`ui.fontSize: expected positive number, got "${String(ui['fontSize'])}"`)
-      }
-    }
+    ConfigValidator.validatePositiveNumber(errors, ui, 'ui', 'rowHeight')
+    ConfigValidator.validatePositiveNumber(errors, ui, 'ui', 'fontSize')
     if ('fontFamily' in ui) {
       if (typeof ui['fontFamily'] !== 'string' || ui['fontFamily'].trim() === '') {
         errors.push(`ui.fontFamily: expected non-empty string, got "${String(ui['fontFamily'])}"`)
@@ -97,14 +89,23 @@ class ConfigValidator {
   }
 
   private static validatePerformance(errors: string[], perf: Record<string, unknown>): void {
-    if ('flushIntervalMs' in perf) {
-      if (typeof perf['flushIntervalMs'] !== 'number' || perf['flushIntervalMs'] <= 0) {
-        errors.push(`performance.flushIntervalMs: expected positive number, got "${String(perf['flushIntervalMs'])}"`)
-      }
-    }
-    if ('maxLogEntries' in perf) {
-      if (typeof perf['maxLogEntries'] !== 'number' || perf['maxLogEntries'] <= 0) {
-        errors.push(`performance.maxLogEntries: expected positive number, got "${String(perf['maxLogEntries'])}"`)
+    ConfigValidator.validatePositiveNumber(errors, perf, 'performance', 'flushIntervalMs')
+    ConfigValidator.validatePositiveNumber(errors, perf, 'performance', 'maxLogEntries')
+  }
+
+  /**
+   * Validates that a field, if present, is a positive number.
+   * The section and field parameters are used to build the error message path (e.g. "ui.rowHeight").
+   */
+  private static validatePositiveNumber(
+    errors: string[],
+    obj: Record<string, unknown>,
+    section: string,
+    field: string
+  ): void {
+    if (field in obj) {
+      if (typeof obj[field] !== 'number' || obj[field] <= 0) {
+        errors.push(`${section}.${field}: expected positive number, got "${String(obj[field])}"`)
       }
     }
   }
