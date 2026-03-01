@@ -1,98 +1,69 @@
-# Phase 6C Implementation: FilterBar, FilterChip, LaneAddInput + Filter Integration
+# Phase 6D Implementation: Draggable Lane Reordering
 
 ## Status: COMPLETE
 
 ## What Was Implemented
 
-Phase 6C adds three new UI components (FilterBar, FilterChip, LaneAddInput), wires them into AppShell, and integrates render-time filtering into SwimLaneGrid using a filtered index mapping strategy.
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `src/renderer/src/components/FilterChip.tsx` | Individual filter display chip with toggle and remove controls |
-| `src/renderer/src/components/FilterBar.tsx` | Horizontal bar with active filter chips and inline add-filter form |
-| `src/renderer/src/components/LaneAddInput.tsx` | Inline text input for adding ad-hoc lanes at runtime |
+Phase 6D adds HTML5 drag-and-drop to lane headers so users can reorder lanes by dragging. When dropped, all log entries are re-classified against the new lane order via `LaneClassifier.reclassifyAll()` and the UI re-renders.
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/renderer/src/App.tsx` | Import and render FilterBar + LaneAddInput; wire filter/lane handlers; remove void suppressions (except `handleReorderLanes` for 6D) |
-| `src/renderer/src/components/SwimLaneGrid.tsx` | Accept `filters` prop; compute `filteredIndices` via `useMemo`; map virtual row indices through filtered index mapping; reset `expandedRowIndex` on filter change |
-| `src/renderer/theme/components.css` | Add `.filter-chip--error`, `.filter-chip__label`, `.filter-bar__form`, `.filter-bar__input`, `.filter-bar__type-group`, `.filter-bar__type-toggle` CSS rules |
+| `src/renderer/src/components/LaneHeader.tsx` | Added DnD props (`laneIndex`, `onDragStart`, `onDragOver`, `onDrop`, `onDragEnd`, `isDragOver`); drag handle is `draggable="true"`; unmatched lane has hidden handle and no DnD events |
+| `src/renderer/src/components/SwimLaneGrid.tsx` | Added `onReorderLanes` prop; local drag state (`dragSourceIndex`, `dragOverIndex`); wired drag callbacks to LaneHeader instances |
+| `src/renderer/src/App.tsx` | Removed `void handleReorderLanes` suppression; passed `handleReorderLanes` to SwimLaneGrid as `onReorderLanes` |
+| `src/renderer/theme/components.css` | Added `.lane-header--drag-over`, `.lane-header__drag-handle--hidden`, `.lane-header__drag-handle[draggable="true"]` CSS rules |
 
 ## Design Decisions
 
-### 1. Filtered Index Mapping (Option A from Plan)
+### 1. Draggable on Handle Span, Not Container Div (Plan Review Point #4)
 
-SwimLaneGrid computes `filteredIndices: number[] | null` via `useMemo`. When no filters are active (or all have `regex === null`), `filteredIndices` is `null` (fast path -- virtualizer uses masterList directly). When filters are active, it is an array of masterList indices that pass all filters. The virtualizer count is `filteredIndices.length` when filtering is active.
+Per the plan review, `draggable="true"` is set on the drag handle span (`lane-header__drag-handle`), not the container div. This allows:
+- Pattern text to remain selectable
+- Prevents accidental drags when clicking elsewhere on the header
+- Drop target events (`onDragOver`, `onDrop`) remain on the container div for a larger hit area
 
-This approach:
-- Avoids copying LogEntry references into a new array
-- Preserves stable masterList indices for `expandedRowIndex` state
-- Uses `null` sentinel for the no-filter fast path
+### 2. Unmatched Lane: No Drag, No Drop
 
-### 2. Expanded Row Index Reset on Filter Change
+The "unmatched" lane (always last, implicit) renders a hidden drag handle (`visibility: hidden` via `.lane-header__drag-handle--hidden`) to preserve spacing alignment. It has no `onDragOver` or `onDrop` handlers, so it cannot be a drop target.
 
-Per plan review point #3, a `useEffect` clears `expandedRowIndex` to `null` when `filters` changes. This prevents stale expanded state when a row gets filtered out.
+### 3. Drag State is Local to SwimLaneGrid
 
-### 3. FilterChip Error State
+Drag state (`dragSourceIndex`, `dragOverIndex`) is transient UI state managed locally in SwimLaneGrid via `useState`. It does not leak to AppShell. Only the final reorder action calls up via `onReorderLanes(fromIndex, toIndex)`.
 
-Per plan review point #6, FilterChip applies `.filter-chip--error` class when `filter.regex === null` (invalid regex). This gives visual feedback for malformed patterns.
+### 4. handleLaneDragOver Uses Functional setState
 
-### 4. FilterBar Always Visible
+`setDragOverIndex((prev) => (prev === index ? prev : index))` avoids unnecessary re-renders when the drag-over index hasn't changed (e.g., rapid `dragover` events on the same target).
 
-The FilterBar always renders (even with no filters), showing the "+ Filter" button. This matches the pre-defined `--filter-bar-height: 48px` token and avoids layout shifts.
+### 5. Drop Guard: Same-Position No-Op
 
-### 5. Filter Type Toggle in FilterBar
+`handleLaneDrop` checks `dragSourceIndex !== dropIndex` before calling `onReorderLanes`. This prevents unnecessary reclassification when a lane is dropped back on itself.
 
-The inline add-filter form supports toggling between "field" and "raw" filter types via a segmented button group (`.filter-bar__type-group`). When "field" is selected, an additional input for the field name appears.
+### 6. CSS Fallback Values for Drag Feedback
 
-### 6. LaneAddInput Reuses `.filter-add-btn` for Button Styling
+`.lane-header--drag-over` uses `var(--color-surface-hover, var(--color-grey-600))` with a fallback, ensuring visual feedback even if the token is undefined.
 
-The LaneAddInput submit button uses the existing `.filter-add-btn` class for consistent styling with the filter bar's add button. No new button CSS was needed.
+### 7. No Void Suppressions Remaining
 
-### 7. Void Suppression Reduction
-
-Removed 5 of 6 void suppressions from AppShell. Only `handleReorderLanes` remains suppressed (will be wired in Phase 6D for drag-and-drop).
-
-## Component Layout in AppShell
-
-```
-<div className="app-layout">
-  <div className="app-toolbar">
-    <ModeToggle />
-    <LaneAddInput />        [NEW]
-    <StreamEndIndicator />
-  </div>
-  <FilterBar />              [NEW]
-  <div className="app-main">
-    <SwimLaneGrid filters={filters} />  [MODIFIED]
-  </div>
-  <UnparseablePanel />
-</div>
-```
+The last `void handleReorderLanes` suppression from Phase 6C has been removed. All handlers defined in AppShell are now wired to UI.
 
 ## Plan Review Points Addressed
 
 | Review Point | How Addressed |
 |---|---|
-| #3: expandedRowIndex reset on filter change | `useEffect(() => setExpandedRowIndex(null), [filters])` in SwimLaneGrid |
-| #6: FilterChip error state for `regex: null` | `.filter-chip--error` class applied when `filter.regex === null` |
+| #4: Put `draggable` on handle span, not container div | `draggable="true"` is on the `<span className="lane-header__drag-handle">`, `onDragOver`/`onDrop` on the container `<div>` |
 
 ## Test Results
 
 ```
 Test Files  15 passed (15)
      Tests  207 passed (207) -- all existing tests still pass
-  Duration  216ms
+  Duration  197ms
 ```
 
 Typecheck: PASS (zero errors)
 
-## What Phase 6D Will Wire
+## What Phase 6E Will Cover
 
-- `handleReorderLanes(fromIndex, toIndex)` -> LaneHeader drag-and-drop events
-- HTML5 DnD state management in SwimLaneGrid
-- Drag feedback CSS classes on LaneHeader
+- Playwright E2E tests for core user flows including drag-and-drop lane reordering

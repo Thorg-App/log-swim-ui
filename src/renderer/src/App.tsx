@@ -131,9 +131,6 @@ function AppShell({ config, initialLanes, masterList }: AppShellProps) {
     return <ErrorScreen errorType={error.type} message={error.message} />
   }
 
-  // WHY: Suppress unused-variable warning for handler wired to UI in Phase 6D (drag-and-drop).
-  void handleReorderLanes
-
   return (
     <div className="app-layout">
       <div className="app-toolbar">
@@ -157,6 +154,7 @@ function AppShell({ config, initialLanes, masterList }: AppShellProps) {
           rowHeight={config.ui.rowHeight}
           mode={mode}
           onScrollUp={() => setMode('scroll')}
+          onReorderLanes={handleReorderLanes}
         />
       </div>
       {unparseableEntries.length > 0 && (

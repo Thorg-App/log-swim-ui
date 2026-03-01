@@ -21,6 +21,7 @@ interface SwimLaneGridProps {
   readonly rowHeight: number
   readonly mode: ViewMode
   readonly onScrollUp: () => void // callback to switch to scroll mode
+  readonly onReorderLanes: (fromIndex: number, toIndex: number) => void
 }
 
 /**
@@ -39,11 +40,37 @@ function SwimLaneGrid({
   timestampFormat,
   rowHeight,
   mode,
-  onScrollUp
+  onScrollUp,
+  onReorderLanes
 }: SwimLaneGridProps) {
   const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastScrollTopRef = useRef(0)
+
+  // --- Drag-and-drop state for lane reordering ---
+  const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  const handleLaneDragStart = useCallback((index: number) => {
+    setDragSourceIndex(index)
+  }, [])
+
+  const handleLaneDragOver = useCallback((index: number) => {
+    setDragOverIndex((prev) => (prev === index ? prev : index))
+  }, [])
+
+  const handleLaneDrop = useCallback((dropIndex: number) => {
+    if (dragSourceIndex !== null && dragSourceIndex !== dropIndex) {
+      onReorderLanes(dragSourceIndex, dropIndex)
+    }
+    setDragSourceIndex(null)
+    setDragOverIndex(null)
+  }, [dragSourceIndex, onReorderLanes])
+
+  const handleLaneDragEnd = useCallback(() => {
+    setDragSourceIndex(null)
+    setDragOverIndex(null)
+  }, [])
 
   // Reset expanded row when filters change (expanded row may be filtered out)
   useEffect(() => {
@@ -128,10 +155,22 @@ function SwimLaneGrid({
           pattern={lane.pattern}
           isError={lane.isError}
           isUnmatched={false}
+          laneIndex={i}
+          onDragStart={handleLaneDragStart}
+          onDragOver={handleLaneDragOver}
+          onDrop={handleLaneDrop}
+          onDragEnd={handleLaneDragEnd}
+          isDragOver={dragOverIndex === i}
         />
       ))}
       {/* Unmatched lane header (always last) */}
-      <LaneHeader key="lane-unmatched" pattern="unmatched" isError={false} isUnmatched={true} />
+      <LaneHeader
+        key="lane-unmatched"
+        pattern="unmatched"
+        isError={false}
+        isUnmatched={true}
+        laneIndex={lanes.length}
+      />
 
       {/* Virtualized scroll container */}
       <div ref={scrollRef} className="swimlane-scroll-container" onScroll={handleScroll}>

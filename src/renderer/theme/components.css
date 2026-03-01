@@ -163,6 +163,27 @@ body {
   color: var(--color-text-disabled);
 }
 
+/* Drop target indicator during lane drag */
+.lane-header--drag-over {
+  background-color: var(--color-surface-hover, var(--color-grey-600));
+  border-left: var(--border-width-thick) solid var(--color-accent, var(--color-grey-400));
+}
+
+/* Hidden drag handle for unmatched lane (preserves spacing) */
+.lane-header__drag-handle--hidden {
+  visibility: hidden;
+}
+
+/* Draggable handle cursor states */
+.lane-header__drag-handle[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+}
+
+.lane-header__drag-handle[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 /* =====================================================================
  * Swimlane Grid
  * ===================================================================== */
