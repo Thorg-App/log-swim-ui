@@ -14,6 +14,8 @@ import { SwimLaneGrid } from './components/SwimLaneGrid'
 import { ModeToggle } from './components/ModeToggle'
 import { StreamEndIndicator } from './components/StreamEndIndicator'
 import { UnparseablePanel } from './components/UnparseablePanel'
+import { FilterBar } from './components/FilterBar'
+import { LaneAddInput } from './components/LaneAddInput'
 
 function App() {
   const init = useAppInit()
@@ -129,25 +131,27 @@ function AppShell({ config, initialLanes, masterList }: AppShellProps) {
     return <ErrorScreen errorType={error.type} message={error.message} />
   }
 
-  // WHY: Suppress unused-variable warnings for handlers that will be wired to UI in Phase 6C/6D.
-  // Removing these would lose the implementation; they are tested through integration in later phases.
-  void handleAddLane
+  // WHY: Suppress unused-variable warning for handler wired to UI in Phase 6D (drag-and-drop).
   void handleReorderLanes
-  void handleAddFilter
-  void handleRemoveFilter
-  void handleToggleFilter
-  void filters
 
   return (
     <div className="app-layout">
       <div className="app-toolbar">
         <ModeToggle mode={mode} onModeChange={setMode} />
+        <LaneAddInput onAddLane={handleAddLane} />
         <StreamEndIndicator visible={streamEnded} />
       </div>
+      <FilterBar
+        filters={filters}
+        onAddFilter={handleAddFilter}
+        onRemoveFilter={handleRemoveFilter}
+        onToggleFilter={handleToggleFilter}
+      />
       <div className="app-main">
         <SwimLaneGrid
           masterList={masterList}
           lanes={lanes}
+          filters={filters}
           version={version}
           timestampFormat={config.ui.viewTimestampFormat}
           rowHeight={config.ui.rowHeight}

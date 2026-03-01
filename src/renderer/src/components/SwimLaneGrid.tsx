@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LaneDefinition, ViewTimestampFormat, ViewMode } from '@core/types'
+import type { Filter } from '@core/filter'
+import { FilterEngine } from '@core/filter'
 import { MasterList } from '@core/master-list'
 import { LaneHeader } from './LaneHeader'
 import { LogRow } from './LogRow'
@@ -13,6 +15,7 @@ const VIRTUALIZER_OVERSCAN = 20
 interface SwimLaneGridProps {
   readonly masterList: MasterList
   readonly lanes: readonly LaneDefinition[]
+  readonly filters: readonly Filter[]
   readonly version: number // render trigger (incremented on each buffer flush)
   readonly timestampFormat: ViewTimestampFormat
   readonly rowHeight: number
@@ -24,10 +27,14 @@ interface SwimLaneGridProps {
  * Main swimlane grid component. Combines lane headers with virtualized log rows
  * in a CSS Grid layout. Uses @tanstack/react-virtual for efficient rendering
  * of large log data sets.
+ *
+ * Filtering is a render-time operation: a filtered index mapping is computed
+ * in useMemo. When no filters are active, `filteredIndices` is null (fast path).
  */
 function SwimLaneGrid({
   masterList,
   lanes,
+  filters,
   version,
   timestampFormat,
   rowHeight,
@@ -38,15 +45,44 @@ function SwimLaneGrid({
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastScrollTopRef = useRef(0)
 
+  // Reset expanded row when filters change (expanded row may be filtered out)
+  useEffect(() => {
+    setExpandedRowIndex(null)
+  }, [filters])
+
   const totalLaneCount = getTotalLaneCount(lanes)
 
   // Compute first timestamp for relative formatting
   const firstTimestamp = masterList.length > 0 ? (masterList.get(0)?.timestamp ?? null) : null
 
+  // Filtered index mapping: array of masterList indices that pass all active filters.
+  // Returns null when no filters are active (fast path -- no filtering needed).
+  const filteredIndices = useMemo(() => {
+    const activeFilters = filters.filter((f) => f.enabled && f.regex !== null)
+    if (activeFilters.length === 0) {
+      return null
+    }
+    const indices: number[] = []
+    for (let i = 0; i < masterList.length; i++) {
+      const entry = masterList.get(i)
+      if (entry !== undefined && FilterEngine.matchesAllFilters(entry, filters)) {
+        indices.push(i)
+      }
+    }
+    return indices
+    // WHY: version triggers recomputation when new entries arrive
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [version, filters, masterList])
+
+  const displayCount = filteredIndices !== null ? filteredIndices.length : masterList.length
+
   const virtualizer = useVirtualizer({
-    count: masterList.length,
+    count: displayCount,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => (index === expandedRowIndex ? rowHeight * 6 : rowHeight),
+    estimateSize: (index) => {
+      const masterIndex = filteredIndices !== null ? filteredIndices[index] : index
+      return masterIndex === expandedRowIndex ? rowHeight * 6 : rowHeight
+    },
     overscan: VIRTUALIZER_OVERSCAN
   })
 
@@ -71,8 +107,8 @@ function SwimLaneGrid({
   }, [mode, onScrollUp])
 
   const handleToggleExpand = useCallback(
-    (index: number) => {
-      setExpandedRowIndex((prev) => (prev === index ? null : index))
+    (masterIndex: number) => {
+      setExpandedRowIndex((prev) => (prev === masterIndex ? null : masterIndex))
     },
     []
   )
@@ -108,12 +144,16 @@ function SwimLaneGrid({
           }}
         >
           {virtualItems.map((virtualRow) => {
-            const entry = masterList.get(virtualRow.index)
+            // Map virtual row index through filteredIndices to get actual masterList index
+            const masterIndex = filteredIndices !== null
+              ? filteredIndices[virtualRow.index]
+              : virtualRow.index
+            const entry = masterList.get(masterIndex)
             if (entry === undefined) return null
 
             return (
               <div
-                key={virtualRow.index}
+                key={masterIndex}
                 // WHY inline style: @tanstack/virtual requires absolute positioning for virtual rows
                 style={{
                   position: 'absolute',
@@ -128,10 +168,10 @@ function SwimLaneGrid({
               >
                 <LogRow
                   entry={entry}
-                  isExpanded={expandedRowIndex === virtualRow.index}
+                  isExpanded={expandedRowIndex === masterIndex}
                   timestampFormat={timestampFormat}
                   firstTimestamp={firstTimestamp}
-                  onToggleExpand={() => handleToggleExpand(virtualRow.index)}
+                  onToggleExpand={() => handleToggleExpand(masterIndex)}
                   laneCount={totalLaneCount}
                 />
               </div>

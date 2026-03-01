@@ -1,75 +1,98 @@
-# Phase 6B Implementation: State Management Refactor (Mutable Lanes + Filter State)
+# Phase 6C Implementation: FilterBar, FilterChip, LaneAddInput + Filter Integration
 
 ## Status: COMPLETE
 
 ## What Was Implemented
 
-Phase 6B lifts lane state from read-only (passed from `useAppInit`) to mutable `useState` in `AppShell`, adds filter state, and refactors `useLogIngestion` to accept a `lanesRef` instead of `lanes` so that lane changes do not cause IPC listener teardown/re-setup.
+Phase 6C adds three new UI components (FilterBar, FilterChip, LaneAddInput), wires them into AppShell, and integrates render-time filtering into SwimLaneGrid using a filtered index mapping strategy.
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `src/renderer/src/components/FilterChip.tsx` | Individual filter display chip with toggle and remove controls |
+| `src/renderer/src/components/FilterBar.tsx` | Horizontal bar with active filter chips and inline add-filter form |
+| `src/renderer/src/components/LaneAddInput.tsx` | Inline text input for adding ad-hoc lanes at runtime |
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/renderer/src/useLogIngestion.ts` | Accept `lanesRef: RefObject<readonly LaneDefinition[]>` instead of `lanes`; read `lanesRef.current` at invocation time in `onLogLine` callback; remove `lanes` from effect dep array; expose `bumpVersion()` in return type |
-| `src/renderer/src/App.tsx` | Lift lanes to `useState` in AppShell; create `lanesRef` synced via `useEffect`; add `filters` state; add handler functions (`handleAddLane`, `handleReorderLanes`, `handleAddFilter`, `handleRemoveFilter`, `handleToggleFilter`); pass `lanesRef` to `useLogIngestion` |
-
-### No New Files
-
-Phase 6B is a refactor of existing files. No new files created.
+| `src/renderer/src/App.tsx` | Import and render FilterBar + LaneAddInput; wire filter/lane handlers; remove void suppressions (except `handleReorderLanes` for 6D) |
+| `src/renderer/src/components/SwimLaneGrid.tsx` | Accept `filters` prop; compute `filteredIndices` via `useMemo`; map virtual row indices through filtered index mapping; reset `expandedRowIndex` on filter change |
+| `src/renderer/theme/components.css` | Add `.filter-chip--error`, `.filter-chip__label`, `.filter-bar__form`, `.filter-bar__input`, `.filter-bar__type-group`, `.filter-bar__type-toggle` CSS rules |
 
 ## Design Decisions
 
-### 1. `lanesRef` Pattern for IPC Stability
+### 1. Filtered Index Mapping (Option A from Plan)
 
-The `useLogIngestion` hook's `useEffect` sets up IPC listeners and a `LogBuffer`. Previously, `lanes` was in the dependency array, meaning any lane change (reorder, add) would tear down all IPC listeners and the LogBuffer timer, then recreate them. This would cause missed log messages during the brief teardown window.
+SwimLaneGrid computes `filteredIndices: number[] | null` via `useMemo`. When no filters are active (or all have `regex === null`), `filteredIndices` is `null` (fast path -- virtualizer uses masterList directly). When filters are active, it is an array of masterList indices that pass all filters. The virtualizer count is `filteredIndices.length` when filtering is active.
 
-**Solution**: Accept a `RefObject<readonly LaneDefinition[]>` instead. The ref object is stable (same identity across renders), so the effect does NOT re-run on lane changes. Inside the `onLogLine` callback, `lanesRef.current` is read at invocation time, ensuring new entries are classified against the latest lane order.
+This approach:
+- Avoids copying LogEntry references into a new array
+- Preserves stable masterList indices for `expandedRowIndex` state
+- Uses `null` sentinel for the no-filter fast path
 
-### 2. `convertIpcToLogEntry(ipcLine, lanesRef.current)` at Call Site
+### 2. Expanded Row Index Reset on Filter Change
 
-Per plan review point #1: The existing `convertIpcToLogEntry` function signature is unchanged (still accepts `lanes: readonly LaneDefinition[]`). The call site in `useLogIngestion` simply passes `lanesRef.current` which is read at invocation time, not at closure capture time. This is the simplest possible change -- one token.
+Per plan review point #3, a `useEffect` clears `expandedRowIndex` to `null` when `filters` changes. This prevents stale expanded state when a row gets filtered out.
 
-### 3. Handler Functions as `useCallback` Stubs
+### 3. FilterChip Error State
 
-All handler functions (`handleAddLane`, `handleReorderLanes`, `handleAddFilter`, `handleRemoveFilter`, `handleToggleFilter`) are fully implemented with correct logic but not yet wired to UI components. They are suppressed with `void` to avoid unused-variable warnings. Phase 6C/6D will wire them to `LaneAddInput`, drag-and-drop, and `FilterBar`.
+Per plan review point #6, FilterChip applies `.filter-chip--error` class when `filter.regex === null` (invalid regex). This gives visual feedback for malformed patterns.
 
-### 4. AppShellProps Change: `lanes` -> `initialLanes`
+### 4. FilterBar Always Visible
 
-Renamed the prop from `lanes` to `initialLanes` with type `readonly LaneDefinition[]` to make it clear this is the seed value. Internal state `lanes` via `useState` is the mutable version.
+The FilterBar always renders (even with no filters), showing the "+ Filter" button. This matches the pre-defined `--filter-bar-height: 48px` token and avoids layout shifts.
 
-### 5. Filter State with `readonly` Arrays
+### 5. Filter Type Toggle in FilterBar
 
-Both `lanes` and `filters` state use `readonly` array types (`readonly LaneDefinition[]`, `readonly Filter[]`) to prevent accidental mutation. All updates create new arrays.
+The inline add-filter form supports toggling between "field" and "raw" filter types via a segmented button group (`.filter-bar__type-group`). When "field" is selected, an additional input for the field name appears.
 
-### 6. `bumpVersion` via `useCallback`
+### 6. LaneAddInput Reuses `.filter-add-btn` for Button Styling
 
-Exposed as a stable callback from `useLogIngestion` so external code (lane reorder, filter change) can trigger re-renders without going through the IPC path. Uses `useCallback` with empty deps for stability.
+The LaneAddInput submit button uses the existing `.filter-add-btn` class for consistent styling with the filter bar's add button. No new button CSS was needed.
+
+### 7. Void Suppression Reduction
+
+Removed 5 of 6 void suppressions from AppShell. Only `handleReorderLanes` remains suppressed (will be wired in Phase 6D for drag-and-drop).
+
+## Component Layout in AppShell
+
+```
+<div className="app-layout">
+  <div className="app-toolbar">
+    <ModeToggle />
+    <LaneAddInput />        [NEW]
+    <StreamEndIndicator />
+  </div>
+  <FilterBar />              [NEW]
+  <div className="app-main">
+    <SwimLaneGrid filters={filters} />  [MODIFIED]
+  </div>
+  <UnparseablePanel />
+</div>
+```
 
 ## Plan Review Points Addressed
 
 | Review Point | How Addressed |
 |---|---|
-| #1: `convertIpcToLogEntry` must use `lanesRef.current` at invocation time | Done -- call site reads `lanesRef.current` at invocation, not from closure |
-| #3: `config` stability assumed | Added WHY comment in dependency array noting Phase 07 may need ref pattern |
-| #5: Filter ID counter as private static | Already done in Phase 6A |
+| #3: expandedRowIndex reset on filter change | `useEffect(() => setExpandedRowIndex(null), [filters])` in SwimLaneGrid |
+| #6: FilterChip error state for `regex: null` | `.filter-chip--error` class applied when `filter.regex === null` |
 
 ## Test Results
 
 ```
 Test Files  15 passed (15)
      Tests  207 passed (207) -- all existing tests still pass
-  Duration  218ms
+  Duration  216ms
 ```
 
 Typecheck: PASS (zero errors)
 
-## What Phase 6C/6D Will Wire
+## What Phase 6D Will Wire
 
-The following handlers exist in `AppShell` and will be connected to UI components:
-
-- `handleAddLane(pattern: string)` -> `LaneAddInput` component (6C)
-- `handleReorderLanes(fromIndex, toIndex)` -> `LaneHeader` drag-and-drop (6D)
-- `handleAddFilter(filter: Filter)` -> `FilterBar` component (6C)
-- `handleRemoveFilter(id: string)` -> `FilterChip` component (6C)
-- `handleToggleFilter(id: string)` -> `FilterChip` component (6C)
-- `filters` state -> `SwimLaneGrid` for render-time filtering (6C)
+- `handleReorderLanes(fromIndex, toIndex)` -> LaneHeader drag-and-drop events
+- HTML5 DnD state management in SwimLaneGrid
+- Drag feedback CSS classes on LaneHeader

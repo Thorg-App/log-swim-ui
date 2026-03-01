@@ -1,44 +1,62 @@
-# Phase 6B -- Implementor Private State
+# Phase 6C -- Implementor Private State
 
 ## Completed
 - Phase 6A: Core Filter Types + Logic + Unit Tests
 - Phase 6B: State Management Refactor (Mutable Lanes + Filter State)
+- Phase 6C: FilterBar, FilterChip, LaneAddInput UI Components + Filter Integration
 
-## Files Modified in 6B
-- `src/renderer/src/useLogIngestion.ts` -- lanesRef pattern, bumpVersion exposed
-- `src/renderer/src/App.tsx` -- lanes lifted to state, filter state added, handler stubs
+## Files Created in 6C
+- `src/renderer/src/components/FilterChip.tsx`
+- `src/renderer/src/components/FilterBar.tsx`
+- `src/renderer/src/components/LaneAddInput.tsx`
+
+## Files Modified in 6C
+- `src/renderer/src/App.tsx` -- Import/render FilterBar + LaneAddInput, wire handlers, remove void suppressions
+- `src/renderer/src/components/SwimLaneGrid.tsx` -- Add `filters` prop, filtered index mapping, expanded row reset
+- `src/renderer/theme/components.css` -- Add filter-chip--error, filter-bar__form, filter-bar__input, filter-bar__type-group/toggle CSS
 
 ## Key Implementation Notes
 
-### lanesRef Pattern
-- `useLogIngestion` accepts `RefObject<readonly LaneDefinition[]>` (imported from `react`)
-- `lanesRef` is in the dependency array but is stable (same object identity), so effect does not re-run on lane changes
-- `lanesRef.current` is read inside `onLogLine` at invocation time
-- `bumpVersion` is a `useCallback(() => setVersion(v => v + 1), [])` -- stable
+### FilterBar State Machine
+- `isAdding: boolean` controls whether the inline add-filter form is shown
+- `filterType: FilterType` toggles between 'field' and 'raw'
+- `fieldName: string` and `pattern: string` for form inputs
+- `resetForm()` clears all form state and hides form
+- Submit validates pattern is non-empty, creates filter via FilterEngine, calls `onAddFilter`, resets form
+- Escape key cancels form
 
-### AppShellProps
-- Renamed `lanes` -> `initialLanes` with `readonly LaneDefinition[]` type
-- Internal `lanes` state: `useState<readonly LaneDefinition[]>(initialLanes)`
-- `lanesRef` synced via `useEffect(() => { lanesRef.current = lanes }, [lanes])`
+### FilterChip
+- Click on chip body toggles enabled/disabled via `onToggle`
+- Click on X button removes filter via `onRemove` (uses stopPropagation to prevent toggle)
+- Shows `filter-chip--error` when `filter.regex === null`
+- Label format: `field:pattern` for field filters, `pattern` for raw filters
 
-### Handler Functions (ready but not wired to UI)
-- `handleAddLane(pattern)`: creates LaneDefinition, appends to lanes, reclassifies all, bumps version
-- `handleReorderLanes(from, to)`: splice reorder, reclassifies all, bumps version
-- `handleAddFilter(filter)`: appends to filters state
-- `handleRemoveFilter(id)`: filters out by id
-- `handleToggleFilter(id)`: maps with FilterEngine.toggleFilter
+### LaneAddInput
+- Simple controlled input + submit button
+- Submits on Enter or button click
+- Clears input after submission
+- Reuses `.filter-add-btn` CSS for button
 
-### Void Suppressions
-All handler functions + `filters` state use `void` to suppress unused-variable warnings. Phase 6C/6D will remove these when wiring to UI.
+### SwimLaneGrid Filter Integration
+- `filteredIndices` computed via `useMemo([version, filters, masterList])`
+- `null` = no active filters (fast path), array = filtered indices
+- Virtualizer count = `filteredIndices.length` or `masterList.length`
+- Virtual row index mapped to masterList index via `filteredIndices[virtualRow.index]`
+- `expandedRowIndex` reset to null when `filters` changes
+- `estimateSize` maps through `filteredIndices` for expanded row detection
 
-## Ready For Next Phase
-Phase 6C can proceed. It will:
-1. Create `FilterBar.tsx`, `FilterChip.tsx`, `LaneAddInput.tsx` components
-2. Wire handlers from AppShell to new components
-3. Add `filters` prop to `SwimLaneGrid` with index-mapping filter strategy
-4. Remove `void` suppressions as handlers get wired
-5. Add expanded row index reset on filter change (per plan review)
+### Remaining Void Suppression
+- Only `handleReorderLanes` is still suppressed (Phase 6D)
 
 ## Test State
 - 207 total tests passing (15 test files)
 - Typecheck passes
+- No new unit tests added in 6C (components are UI-only, tested via E2E in 6E)
+
+## Ready For Next Phase
+Phase 6D can proceed. It will:
+1. Add drag-and-drop HTML5 DnD to LaneHeader
+2. Wire `handleReorderLanes` from AppShell
+3. Add drag state management in SwimLaneGrid
+4. Add drag feedback CSS (`.lane-header--drag-over`, `.lane-header--dragging`)
+5. Remove last `void handleReorderLanes` suppression
