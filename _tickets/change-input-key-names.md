@@ -22,3 +22,6 @@ TO:
 ```sh file=[/home/nickolaykondratyev/git_repos/Thorg-App_log-swim-ui/test_manual.sh] Lines=[8-8]
   cat ./test_data/sample-logs/sample-logs-10-lines.jsonl | log-swim-ui --input_key.level "level" --input_key.timestamp "timestamp"
 ```
+
+--------------------------------------------------------------------------------
+Also let's change '--lanes' key to be more explicit. From '--lanes' to something like '--regexes_for_filter_columns'
