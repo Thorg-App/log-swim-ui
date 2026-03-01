@@ -83,12 +83,9 @@ app.whenReady().then(async () => {
     bridge.start(process.stdin)
   })
 
-  // macOS: re-create window on activate
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    }
-  })
+  // WHY: No macOS 'activate' handler. This is a stdin-piped CLI tool: window-all-closed
+  // unconditionally quits the app, so activate never fires. If it somehow did, recreating
+  // a window without an IPC bridge would produce a non-functional shell.
 })
 
 app.on('window-all-closed', () => {

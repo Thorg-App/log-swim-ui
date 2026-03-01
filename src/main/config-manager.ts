@@ -24,36 +24,38 @@ type ConfigLoadResult = ConfigLoadSuccess | ConfigLoadFailure
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/
 
 class ConfigValidator {
-  private readonly errors: string[] = []
-
-  validate(loaded: Record<string, unknown>): string[] {
-    this.errors.length = 0
+  static validate(loaded: Record<string, unknown>): readonly string[] {
+    const errors: string[] = []
 
     if ('colors' in loaded && typeof loaded['colors'] === 'object' && loaded['colors'] !== null) {
-      this.validateColors(loaded['colors'] as Record<string, unknown>)
+      // WHY: narrowed from unknown to non-null object by typeof+null guard above
+      ConfigValidator.validateColors(errors, loaded['colors'] as Record<string, unknown>)
     }
 
     if ('ui' in loaded && typeof loaded['ui'] === 'object' && loaded['ui'] !== null) {
-      this.validateUI(loaded['ui'] as Record<string, unknown>)
+      // WHY: narrowed from unknown to non-null object by typeof+null guard above
+      ConfigValidator.validateUI(errors, loaded['ui'] as Record<string, unknown>)
     }
 
     if ('performance' in loaded && typeof loaded['performance'] === 'object' && loaded['performance'] !== null) {
-      this.validatePerformance(loaded['performance'] as Record<string, unknown>)
+      // WHY: narrowed from unknown to non-null object by typeof+null guard above
+      ConfigValidator.validatePerformance(errors, loaded['performance'] as Record<string, unknown>)
     }
 
-    return [...this.errors]
+    return errors
   }
 
-  private validateColors(colors: Record<string, unknown>): void {
+  private static validateColors(errors: string[], colors: Record<string, unknown>): void {
     if ('levels' in colors && typeof colors['levels'] === 'object' && colors['levels'] !== null) {
+      // WHY: narrowed from unknown to non-null object by typeof+null guard above
       const levels = colors['levels'] as Record<string, unknown>
       for (const [key, value] of Object.entries(levels)) {
         if (typeof value !== 'string' || !HEX_COLOR_PATTERN.test(value)) {
-          this.errors.push(`colors.levels.${key}: expected hex color (e.g. #FF0000), got "${String(value)}"`)
+          errors.push(`colors.levels.${key}: expected hex color (e.g. #FF0000), got "${String(value)}"`)
         }
       }
     } else if ('levels' in colors) {
-      this.errors.push('colors.levels: expected an object')
+      errors.push('colors.levels: expected an object')
     }
 
     const colorFields = ['unrecognizedLevel', 'swimlaneHeaders', 'background', 'rowHover', 'expandedRow'] as const
@@ -61,47 +63,48 @@ class ConfigValidator {
       if (field in colors) {
         const value = colors[field]
         if (typeof value !== 'string' || !HEX_COLOR_PATTERN.test(value)) {
-          this.errors.push(`colors.${field}: expected hex color (e.g. #FF0000), got "${String(value)}"`)
+          errors.push(`colors.${field}: expected hex color (e.g. #FF0000), got "${String(value)}"`)
         }
       }
     }
   }
 
-  private validateUI(ui: Record<string, unknown>): void {
+  private static validateUI(errors: string[], ui: Record<string, unknown>): void {
     if ('rowHeight' in ui) {
       if (typeof ui['rowHeight'] !== 'number' || ui['rowHeight'] <= 0) {
-        this.errors.push(`ui.rowHeight: expected positive number, got "${String(ui['rowHeight'])}"`)
+        errors.push(`ui.rowHeight: expected positive number, got "${String(ui['rowHeight'])}"`)
       }
     }
     if ('fontSize' in ui) {
       if (typeof ui['fontSize'] !== 'number' || ui['fontSize'] <= 0) {
-        this.errors.push(`ui.fontSize: expected positive number, got "${String(ui['fontSize'])}"`)
+        errors.push(`ui.fontSize: expected positive number, got "${String(ui['fontSize'])}"`)
       }
     }
     if ('fontFamily' in ui) {
       if (typeof ui['fontFamily'] !== 'string' || ui['fontFamily'].trim() === '') {
-        this.errors.push(`ui.fontFamily: expected non-empty string, got "${String(ui['fontFamily'])}"`)
+        errors.push(`ui.fontFamily: expected non-empty string, got "${String(ui['fontFamily'])}"`)
       }
     }
     if ('viewTimestampFormat' in ui) {
+      // WHY: widen literal union tuple to string[] so .includes() accepts the unknown-narrowed string
       const valid = VIEW_TIMESTAMP_FORMATS as readonly string[]
       if (typeof ui['viewTimestampFormat'] !== 'string' || !valid.includes(ui['viewTimestampFormat'])) {
-        this.errors.push(
+        errors.push(
           `ui.viewTimestampFormat: expected one of [${VIEW_TIMESTAMP_FORMATS.join(', ')}], got "${String(ui['viewTimestampFormat'])}"`
         )
       }
     }
   }
 
-  private validatePerformance(perf: Record<string, unknown>): void {
+  private static validatePerformance(errors: string[], perf: Record<string, unknown>): void {
     if ('flushIntervalMs' in perf) {
       if (typeof perf['flushIntervalMs'] !== 'number' || perf['flushIntervalMs'] <= 0) {
-        this.errors.push(`performance.flushIntervalMs: expected positive number, got "${String(perf['flushIntervalMs'])}"`)
+        errors.push(`performance.flushIntervalMs: expected positive number, got "${String(perf['flushIntervalMs'])}"`)
       }
     }
     if ('maxLogEntries' in perf) {
       if (typeof perf['maxLogEntries'] !== 'number' || perf['maxLogEntries'] <= 0) {
-        this.errors.push(`performance.maxLogEntries: expected positive number, got "${String(perf['maxLogEntries'])}"`)
+        errors.push(`performance.maxLogEntries: expected positive number, got "${String(perf['maxLogEntries'])}"`)
       }
     }
   }
@@ -129,6 +132,7 @@ function deepMerge(defaults: AppConfig, loaded: Record<string, unknown>): AppCon
 
 function mergeColors(defaults: AppConfigColors, loaded: unknown): AppConfigColors {
   if (typeof loaded !== 'object' || loaded === null) return defaults
+  // WHY: narrowed from unknown to non-null object by early-return guard above
   const src = loaded as Record<string, unknown>
 
   return {
@@ -146,6 +150,7 @@ function mergeLevels(
   loaded: unknown
 ): Readonly<Record<string, string>> {
   if (typeof loaded !== 'object' || loaded === null) return defaults
+  // WHY: narrowed from unknown to non-null object by early-return guard above
   const src = loaded as Record<string, unknown>
   const result: Record<string, string> = { ...defaults }
 
@@ -167,7 +172,9 @@ function mergeHexColor(defaultValue: string, loaded: unknown): string {
 
 function mergeUI(defaults: AppConfigUI, loaded: unknown): AppConfigUI {
   if (typeof loaded !== 'object' || loaded === null) return defaults
+  // WHY: narrowed from unknown to non-null object by early-return guard above
   const src = loaded as Record<string, unknown>
+  // WHY: widen literal union tuple to string[] so .includes() accepts the unknown-narrowed string
   const validFormats = VIEW_TIMESTAMP_FORMATS as readonly string[]
 
   return {
@@ -185,6 +192,7 @@ function mergeUI(defaults: AppConfigUI, loaded: unknown): AppConfigUI {
         : defaults.fontSize,
     viewTimestampFormat:
       typeof src['viewTimestampFormat'] === 'string' && validFormats.includes(src['viewTimestampFormat'])
+        // WHY: validated as string member of VIEW_TIMESTAMP_FORMATS by includes() check above
         ? (src['viewTimestampFormat'] as AppConfigUI['viewTimestampFormat'])
         : defaults.viewTimestampFormat
   }
@@ -192,6 +200,7 @@ function mergeUI(defaults: AppConfigUI, loaded: unknown): AppConfigUI {
 
 function mergePerformance(defaults: AppConfigPerformance, loaded: unknown): AppConfigPerformance {
   if (typeof loaded !== 'object' || loaded === null) return defaults
+  // WHY: narrowed from unknown to non-null object by early-return guard above
   const src = loaded as Record<string, unknown>
 
   return {
@@ -264,11 +273,11 @@ class ConfigManager {
       return { ok: false, error: 'Config file root is not a JSON object', config: DEFAULT_APP_CONFIG }
     }
 
+    // WHY: narrowed from unknown to non-null, non-array object by typeof+null+Array.isArray guards above
     const loadedRecord = parsed as Record<string, unknown>
 
     // Validate before merging
-    const validator = new ConfigValidator()
-    const errors = validator.validate(loadedRecord)
+    const errors = ConfigValidator.validate(loadedRecord)
     if (errors.length > 0) {
       this.currentConfig = DEFAULT_APP_CONFIG
       return {

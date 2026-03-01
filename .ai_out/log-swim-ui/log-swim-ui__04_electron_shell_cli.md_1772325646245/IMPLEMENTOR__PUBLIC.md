@@ -63,3 +63,32 @@ Validation runs on the raw loaded JSON before deep merge. If validation fails, d
 
 ### D8: StdinReader backward-compatible extension
 `StdinReader.start()` return type changed from `void` to `StdinReaderHandle`. Existing callers that ignore the return value continue to work. All 6 existing stdin-reader tests pass unchanged.
+
+---
+
+## Review Feedback Addressed (Post-Review Iteration)
+
+### I-02 (MUST FIX): Added `// WHY:` comments to all `as` type assertions
+Added WHY comments to all 11 `as` type assertions in `src/main/config-manager.ts`:
+- 7 assertions narrowing `unknown` to `Record<string, unknown>` after `typeof`/`null` guards
+- 2 assertions widening `VIEW_TIMESTAMP_FORMATS` literal union to `string[]` for `.includes()` compatibility
+- 1 assertion narrowing `parsed` after `typeof`+`null`+`Array.isArray` guards
+- 1 assertion narrowing validated `viewTimestampFormat` to its literal union type
+
+### I-03 (EVALUATE): ConfigValidator refactored to static pattern
+**Changed.** Converted `ConfigValidator` from a stateful class (with `this.errors` array cleared via `length = 0`) to a fully static class. This follows the project's existing static utility patterns (`JsonParser`, `CliParser`, `LaneClassifier`). Changes:
+- `validate()` is now `static validate()` returning `readonly string[]`
+- Private methods (`validateColors`, `validateUI`, `validatePerformance`) are now `private static` and accept `errors: string[]` as first parameter
+- Call site changed from `new ConfigValidator().validate(...)` to `ConfigValidator.validate(...)`
+- Eliminates unnecessary instantiation and the unusual `errors.length = 0` reset
+
+### S-03 (QUICK FIX): Removed dead macOS `activate` handler
+Removed the macOS `activate` handler from `src/main/index.ts`. Since `window-all-closed` unconditionally calls `app.quit()`, the activate handler could never fire. If it somehow did fire, it would create a non-functional window (no IPC bridge, no config error). Added a WHY comment explaining the rationale.
+
+### Not Addressed (deliberate decisions per instructions)
+- **I-01**: Preload importing from core is accepted (DRY). CLAUDE.md update deferred to DOC_FIXER phase.
+- **I-04**: Strict validation before merge is intentional (D7).
+- **S-01**: `CliArgs`/`CliArgsResult` structural duplication is minimal and serves clarity.
+- **S-02**: Listener leak in preload is theoretical; Electron manages this.
+- **S-04**: CJS bin script is standard Node.js pattern.
+- **S-05**: Free-floating merge functions are module-private and cohesive.
