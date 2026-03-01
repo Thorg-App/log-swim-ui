@@ -5,6 +5,7 @@ import { MasterList } from '@core/master-list'
 import { useAppInit } from './useAppInit'
 import { useLogIngestion } from './useLogIngestion'
 import { ErrorScreen } from './ErrorScreen'
+import { SwimLaneGrid } from './components/SwimLaneGrid'
 
 function App() {
   const init = useAppInit()
@@ -46,7 +47,8 @@ function AppShell({ config, lanes, masterList }: AppShellProps) {
     streamEnded,
     error,
     unparseableEntries,
-    mode
+    mode,
+    setMode
   } = useLogIngestion(masterList, lanes, config)
 
   if (error !== null) {
@@ -66,18 +68,22 @@ function AppShell({ config, lanes, masterList }: AppShellProps) {
         )}
       </div>
       <div className="app-main">
-        {/* SwimLaneGrid placeholder -- will be implemented in Sub-phase 5B */}
-        <div style={{ padding: 'var(--space-4)' }}>
-          <p className="text-sm text-muted">
-            Entries: {masterList.length} | Lanes: {lanes.length} | Version: {version}
-          </p>
-          {unparseableEntries.length > 0 && (
-            <p className="text-xs text-muted">
-              Unparseable: {unparseableEntries.length}
-            </p>
-          )}
-        </div>
+        <SwimLaneGrid
+          masterList={masterList}
+          lanes={lanes}
+          version={version}
+          timestampFormat={config.ui.viewTimestampFormat}
+          rowHeight={config.ui.rowHeight}
+          mode={mode}
+          onScrollUp={() => setMode('scroll')}
+        />
       </div>
+      {unparseableEntries.length > 0 && (
+        // UnparseablePanel placeholder -- will be implemented in Sub-phase 5C
+        <div className="text-xs text-muted" style={{ padding: 'var(--space-2) var(--space-4)' }}>
+          Unparseable: {unparseableEntries.length}
+        </div>
+      )}
     </div>
   )
 }

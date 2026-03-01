@@ -1,47 +1,39 @@
-# IMPLEMENTOR Private Context -- Phase 05 Sub-phase 5A
+# IMPLEMENTOR Private Context -- Phase 05 Sub-phase 5B
 
-## Completed: Sub-phase 5A
+## Completed: Sub-phases 5A + 5B
 
-All 11 items from the plan are implemented. Tests pass (145), typecheck clean.
+All items from both sub-phases are implemented. Tests pass (172), typecheck clean.
 
-## Key Files Created/Modified
+## Key Files Created/Modified in 5B
 
 ### New files:
-- `/src/renderer/src/timestamp-formatter.ts`
-- `/src/renderer/src/ipc-converters.ts`
-- `/src/renderer/src/useAppInit.ts`
-- `/src/renderer/src/useLogIngestion.ts`
-- `/src/renderer/src/ErrorScreen.tsx`
-- `/tests/unit/renderer/timestamp-formatter.test.ts` (8 tests)
-- `/tests/unit/renderer/ipc-converters.test.ts` (5 tests)
+- `/src/renderer/src/log-row-utils.ts`
+- `/src/renderer/src/components/LaneHeader.tsx`
+- `/src/renderer/src/components/LogRow.tsx`
+- `/src/renderer/src/components/SwimLaneGrid.tsx`
+- `/tests/unit/renderer/log-row-utils.test.ts` (27 tests)
 
 ### Modified files:
-- `/src/core/types.ts` -- ElectronApi unsubscribe returns + ViewMode + AppErrorType
-- `/src/preload/index.ts` -- Handler wrapper + unsubscribe pattern
-- `/vitest.config.ts` -- @renderer alias
-- `/package.json` -- @tanstack/react-virtual dependency
-- `/src/renderer/src/App.tsx` -- Real app shell (no more DesignReferencePage)
-- `/src/renderer/theme/components.css` -- error-screen + swimlane-scroll-container CSS
+- `/src/renderer/src/App.tsx` -- SwimLaneGrid wired in, setMode destructured from useLogIngestion
 
-## Notes for Next Iteration (5B)
+## Notes for Next Iteration (5C)
 
-1. App.tsx has placeholder divs where SwimLaneGrid will go
-2. AppShell renders entry count, lane count, version as proof-of-data-flow
-3. ModeToggle is just a `<span>` showing current mode -- needs proper component in 5C
-4. StreamEndIndicator is inline `<span>` -- needs proper component in 5C
-5. `@tanstack/react-virtual` is installed but not yet imported anywhere
-6. DesignReferencePage.tsx still exists, just not imported
+1. App.tsx toolbar has placeholder `<span>` for ModeToggle -- needs ModeToggle.tsx component
+2. StreamEndIndicator is an inline `<span>` -- needs StreamEndIndicator.tsx component
+3. UnparseablePanel is a placeholder div -- needs UnparseablePanel.tsx component
+4. Scroll-up detection is inlined in SwimLaneGrid -- plan suggests optionally extracting to scroll-utils.ts
+5. `setMode` is already destructured in AppShell and passed as `onScrollUp` callback -- ready for ModeToggle wiring
 
-## Types Added to core/types.ts
+## Architecture Notes
 
-```typescript
-type ViewMode = 'live' | 'scroll'
-type AppErrorType = 'no-stdin' | 'stream-error' | 'config-error'
-```
+- SwimLaneGrid uses a single `useVirtualizer` over `masterList.length` items
+- Virtual rows are positioned absolutely within a relative-positioned spacer div
+- Each virtual row renders a LogRow which uses CSS grid to place content in the correct column
+- `expandedRowIndex` state is local to SwimLaneGrid (single-expansion model)
+- `measureElement` ref is attached for dynamic row height measurement on expand
+- Auto-scroll uses `useEffect` keyed on `[version, mode]`
+- Scroll-up detection uses `onScroll` handler with ref-tracked `lastScrollTop`
 
-Both exported as types and their const arrays (VIEW_MODES, APP_ERROR_TYPES) exported as values.
-
-## Test Count: 145 total (12 test files)
-- 132 existing tests (unchanged)
-- 8 new timestamp-formatter tests
-- 5 new ipc-converters tests
+## Test Count: 172 total (13 test files)
+- 145 existing tests (unchanged, from 5A)
+- 27 new log-row-utils tests

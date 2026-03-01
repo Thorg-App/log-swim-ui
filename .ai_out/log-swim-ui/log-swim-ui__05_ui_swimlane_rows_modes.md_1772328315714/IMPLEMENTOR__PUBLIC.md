@@ -1,55 +1,56 @@
-# Phase 05 Sub-phase 5A: Implementation Summary
+# Phase 05 Sub-phases 5A + 5B: Implementation Summary
 
-## What Was Implemented
+## Sub-phase 5A: Core App Shell + State + IPC Wiring (COMPLETE)
 
-Sub-phase 5A -- Core App Shell + State + IPC Wiring. All acceptance criteria met.
+All acceptance criteria met. See previous version for details.
+
+## Sub-phase 5B: Swimlane Grid + Virtualization + LogRow (COMPLETE)
+
+### What Was Implemented
+
+Sub-phase 5B -- Swimlane Grid with CSS Grid layout, @tanstack/react-virtual virtualization, lane headers, log rows with expand/collapse and level colorization.
 
 ### New Files
 
 | File | Purpose |
 |------|---------|
-| `src/renderer/src/timestamp-formatter.ts` | Pure function: `formatTimestamp(date, format, firstTimestamp)` for iso/local/relative |
-| `src/renderer/src/ipc-converters.ts` | Pure function: `convertIpcToLogEntry(ipcLine, lanes)` -- IpcLogLine to LogEntry |
-| `src/renderer/src/useAppInit.ts` | Hook: async init (loads config + CLI args, applies CSS, builds lanes, creates MasterList) |
-| `src/renderer/src/useLogIngestion.ts` | Hook: IPC callbacks + LogBuffer + version counter + unparseable collection |
-| `src/renderer/src/ErrorScreen.tsx` | Full-screen error component with revert-to-defaults for config errors |
-| `tests/unit/renderer/timestamp-formatter.test.ts` | 8 tests covering iso, local, relative formats |
-| `tests/unit/renderer/ipc-converters.test.ts` | 5 tests covering conversion, lane classification, field preservation |
+| `src/renderer/src/log-row-utils.ts` | Pure functions: `getLevelCssClass`, `getMessagePreview`, `getGridColumn`, `getTotalLaneCount` |
+| `src/renderer/src/components/LaneHeader.tsx` | Lane header with regex pattern, truncation, tooltip, error/unmatched states |
+| `src/renderer/src/components/LogRow.tsx` | Virtualized log row with level colorization, timestamp formatting, expand/collapse |
+| `src/renderer/src/components/SwimLaneGrid.tsx` | CSS Grid + @tanstack/react-virtual virtualization container, lane headers, auto-scroll, scroll-up detection |
+| `tests/unit/renderer/log-row-utils.test.ts` | 27 tests covering all pure utility functions |
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/core/types.ts` | ElectronApi push methods return `() => void`; added `ViewMode`, `AppErrorType` types |
-| `src/preload/index.ts` | Each `on*` method stores handler wrapper and returns unsubscribe function |
-| `vitest.config.ts` | Added `@renderer` path alias |
-| `package.json` | Added `@tanstack/react-virtual` to dependencies |
-| `src/renderer/src/App.tsx` | Replaced DesignReferencePage with real app shell (useAppInit + useLogIngestion + ErrorScreen) |
-| `src/renderer/theme/components.css` | Added `.error-screen*` and `.swimlane-scroll-container` CSS classes |
+| `src/renderer/src/App.tsx` | Replaced placeholder div with `SwimLaneGrid` component; added `setMode` from `useLogIngestion`; added unparseable entries placeholder in app-layout |
 
 ### Design Decisions
 
-1. **No explicit JSX.Element return types**: React 19 with `react-jsx` transform does not expose the `JSX` namespace globally. Function components use inferred return types, consistent with existing code (e.g., `DesignReferencePage`).
+1. **Single virtualizer with full-width rows**: Each virtual row spans all grid columns. Content is placed in the correct lane column via CSS `gridColumn`. This avoids multiple virtualizers or complex column synchronization.
 
-2. **ViewMode and AppErrorType in core/types.ts**: Placed in the shared types file (not renderer-only) because they are domain types that may be referenced across process boundaries in future phases.
+2. **Inline styles limited to three data-driven cases**: (a) `gridTemplateColumns` on swimlane-grid (dynamic lane count), (b) `gridColumn` on log row content (data-driven lane assignment), (c) virtual row positioning (required by @tanstack/virtual). All three have `// WHY` comments explaining the necessity.
 
-3. **Unparseable entries tracking**: Uses `useRef<string[]>` with a separate `unparseableCount` state to trigger re-renders without copying the array on every push. Capped at `MAX_UNPARSEABLE_ENTRIES = 1000`.
+3. **Expanded row estimation**: Uses `estimateSize` returning `rowHeight * 6` for expanded rows as a reasonable estimate. The virtualizer's `measureElement` ref is attached to each row's container div for dynamic re-measurement after expand.
 
-4. **AppShell as a separate component within App.tsx**: Extracted into a separate function (not a separate file) because it needs access to the ready-state props from `useAppInit`. Keeps the component tree shallow for 5A.
+4. **Scroll-up detection**: Implemented inline in SwimLaneGrid with a 5px threshold. Uses a ref to track `lastScrollTop`. When scroll delta exceeds the threshold in live mode, calls `onScrollUp()` which sets mode to 'scroll' in the parent.
 
-5. **DesignReferencePage NOT deleted**: File preserved as dev reference per plan. Only the import was removed from App.tsx.
+5. **LaneHeader drag handle**: Rendered as visual indicator only (braille pattern Unicode char). Non-functional in Phase 05; will be wired in Phase 06.
+
+6. **Message preview priority**: `fields.message` > `fields.msg` > truncated `rawJson`. Non-string values in `message`/`msg` fields are skipped (falls through to rawJson).
+
+7. **Level CSS class normalization**: Input level is lowercased before matching against the known levels set. This ensures `"WARN"`, `"Warn"`, and `"warn"` all map to `log-row--warn`.
+
+### What Is NOT Done (deferred to 5C)
+
+- ModeToggle component (placeholder text in App.tsx toolbar)
+- StreamEndIndicator as proper component (inline span used)
+- UnparseablePanel component (placeholder text in app-layout)
+- Scroll-up detection pure function extraction (inlined in SwimLaneGrid for simplicity)
 
 ### Verification
 
-- `npm test`: 145 tests pass (12 test files), including 13 new tests
+- `npm test`: 172 tests pass (13 test files), including 27 new log-row-utils tests
 - `npm run typecheck`: Clean (0 errors)
 - No existing tests were modified, skipped, or removed
-
-### What Is NOT Done (deferred to 5B/5C)
-
-- SwimLaneGrid component (placeholder div in App.tsx)
-- ModeToggle component (placeholder text in App.tsx)
-- StreamEndIndicator as proper component (inline span used)
-- UnparseablePanel component
-- LaneHeader, LogRow, log-row-utils
-- Scroll-up detection for auto mode switching
