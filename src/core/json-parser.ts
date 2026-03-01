@@ -22,6 +22,8 @@ class JsonParser {
       return { ok: false, rawLine, error: 'Parsed value is not a JSON object' }
     }
 
+    // WHY: After eliminating null, arrays, and non-objects above, the remaining
+    // type from JSON.parse is a plain object, which is Record<string, unknown>.
     return { ok: true, fields: parsed as Record<string, unknown>, rawJson: rawLine }
   }
 }
