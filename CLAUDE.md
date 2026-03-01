@@ -292,3 +292,4 @@ These aliases are configured in `tsconfig.web.json` (TypeScript), `electron.vite
 | `npm run test:watch` | Run Vitest in watch mode |
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run typecheck` | Run TypeScript type checking |
+| `npm run link:local` | Build + `npm link` for local testing (`log-swim-ui` available globally) |
