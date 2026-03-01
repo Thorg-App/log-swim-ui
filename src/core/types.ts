@@ -93,11 +93,11 @@ const IPC_CHANNELS = {
 // WHY: Defined in core so both preload and renderer can reference the same contract.
 
 interface ElectronApi {
-  // Push channels (main -> renderer): register callbacks
-  onLogLine: (callback: (line: IpcLogLine) => void) => void
-  onStreamEnd: (callback: () => void) => void
-  onStreamError: (callback: (error: string) => void) => void
-  onConfigError: (callback: (error: string) => void) => void
+  // Push channels (main -> renderer): register callbacks, return unsubscribe function
+  onLogLine: (callback: (line: IpcLogLine) => void) => () => void
+  onStreamEnd: (callback: () => void) => () => void
+  onStreamError: (callback: (error: string) => void) => () => void
+  onConfigError: (callback: (error: string) => void) => () => void
 
   // Request channels (renderer -> main): invoke and await response
   getConfig: () => Promise<AppConfig>
@@ -168,6 +168,16 @@ const DEFAULT_APP_CONFIG: AppConfig = {
   }
 }
 
+// --- View Mode ---
+
+const VIEW_MODES = ['live', 'scroll'] as const
+type ViewMode = (typeof VIEW_MODES)[number]
+
+// --- App Error Types ---
+
+const APP_ERROR_TYPES = ['no-stdin', 'stream-error', 'config-error'] as const
+type AppErrorType = (typeof APP_ERROR_TYPES)[number]
+
 // --- Exports ---
 
 export type {
@@ -187,12 +197,16 @@ export type {
   AppConfigColors,
   AppConfigUI,
   AppConfigPerformance,
-  AppConfig
+  AppConfig,
+  ViewMode,
+  AppErrorType
 }
 
 export {
   TIMESTAMP_FORMATS,
   VIEW_TIMESTAMP_FORMATS,
+  VIEW_MODES,
+  APP_ERROR_TYPES,
   IPC_CHANNELS,
   DEFAULT_APP_CONFIG,
   createLaneDefinition

@@ -9,7 +9,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@core': resolve('src/core')
+      '@core': resolve('src/core'),
+      '@renderer': resolve('src/renderer/src')
     }
   }
 })
