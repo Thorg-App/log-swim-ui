@@ -1,11 +1,11 @@
 ---
 id: ldsevx0g3koesmf4fpgikzh4o
 title: "Make it more obvious that there is a global filter"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-01T14:39:18Z
-status_updated_iso: 2026-03-01T14:39:18Z
+status_updated_iso: 2026-03-01T14:56:27Z
 type: task
 priority: 0
 assignee: nickolaykondratyev
