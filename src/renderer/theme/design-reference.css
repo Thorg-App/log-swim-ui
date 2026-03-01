@@ -1,0 +1,261 @@
+/* =====================================================================
+ * Design Reference Page — Development-Only Styles
+ *
+ * Preview state classes and layout styles for DesignReferencePage.tsx.
+ * These will be removed when the reference page is replaced by
+ * real components in Phase 05+.
+ * ===================================================================== */
+
+/* =====================================================================
+ * Preview State Classes
+ *
+ * Force visual states (hover, active, focus) onto elements so they can
+ * be viewed statically on the design reference page without mouse
+ * interaction.
+ * ===================================================================== */
+
+/* Forced hover state for log rows */
+.preview-hover.log-row {
+  background-color: var(--color-row-hover);
+}
+
+/* Forced hover state for filter chips */
+.preview-hover.filter-chip {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-focus);
+}
+
+/* Forced hover state for filter add button */
+.preview-hover.filter-add-btn {
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
+}
+
+/* Forced hover state for mode toggle option */
+.preview-hover.mode-toggle__option {
+  color: var(--color-text-primary);
+}
+
+/* Forced active state for filter chips */
+.preview-active.filter-chip {
+  background-color: var(--color-surface-active);
+  border-color: var(--color-primary-active);
+}
+
+/* Forced focus state for inputs */
+.preview-focus.lane-add-input__field {
+  border-color: var(--color-border-focus);
+}
+
+/* Forced focus ring */
+.preview-focus-ring {
+  outline: var(--border-width) solid var(--color-border-focus);
+  outline-offset: var(--border-width);
+}
+
+/* =====================================================================
+ * Design Reference Page Layout
+ * ===================================================================== */
+.ref-page {
+  padding: var(--space-8);
+  max-width: 1200px;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.ref-page__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.ref-page__subtitle {
+  margin-bottom: var(--space-8);
+}
+
+.ref-section {
+  margin-bottom: var(--space-8);
+}
+
+.ref-section__heading {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border-subtle);
+}
+
+/* Color swatch grid */
+.ref-swatch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ref-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  width: var(--space-24);
+}
+
+.ref-swatch__color {
+  width: var(--space-16);
+  height: var(--space-12);
+  border-radius: var(--border-radius-md);
+  border: var(--border-width) solid var(--color-border-subtle);
+}
+
+/* Spacing bars */
+.ref-spacing-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ref-spacing-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ref-spacing-label {
+  width: var(--space-32);
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.ref-spacing-bar {
+  background-color: var(--color-primary);
+  border-radius: var(--border-radius-sm);
+  min-height: var(--space-2);
+}
+
+/* Typography samples */
+.ref-type-samples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ref-type-xl {
+  font-size: var(--text-xl);
+}
+
+.ref-type-2xl {
+  font-size: var(--text-2xl);
+}
+
+.ref-weight-normal {
+  font-weight: var(--weight-normal);
+}
+
+.ref-weight-medium {
+  font-weight: var(--weight-medium);
+}
+
+.ref-weight-semibold {
+  font-weight: var(--weight-semibold);
+}
+
+.ref-weight-bold {
+  font-weight: var(--weight-bold);
+}
+
+/* Shadow showcase */
+.ref-shadow-grid {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.ref-shadow-box {
+  width: var(--space-32);
+  height: var(--space-24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius-md);
+}
+
+/* Border samples */
+.ref-border-samples {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ref-border-box {
+  width: var(--space-24);
+  height: var(--space-16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius-md);
+}
+
+.ref-border--thin {
+  border-width: var(--border-width-thin);
+}
+
+.ref-border--default {
+  border-width: var(--border-width);
+}
+
+.ref-border--thick {
+  border-width: var(--border-width-thick);
+}
+
+.ref-radius--sm {
+  border-radius: var(--border-radius-sm);
+}
+
+.ref-radius--md {
+  border-radius: var(--border-radius-md);
+}
+
+.ref-radius--lg {
+  border-radius: var(--border-radius-lg);
+}
+
+.ref-radius--full {
+  border-radius: var(--border-radius-full);
+}
+
+/* Component previews */
+.ref-component-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ref-component-row {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.ref-state-label {
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.ref-state-label:first-child {
+  margin-top: 0;
+}
+
+/* Settings panel preview (non-fixed, inline rendering) */
+.ref-settings-preview {
+  background-color: var(--color-panel-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  padding: var(--space-6);
+  max-width: var(--settings-panel-width);
+  box-shadow: var(--shadow-3);
+}

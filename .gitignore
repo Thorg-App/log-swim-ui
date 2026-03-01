@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+
+# Temp files
+.tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test output
+test-results/
+playwright-report/
+
+# Environment
+.env
+.env.*
+
+# npm
+*.tgz
+
+# Logs
+npm-debug.log*
+
+# Electron
+*.asar
+
+# Output directory
+.out/
