@@ -6,6 +6,9 @@ import { useAppInit } from './useAppInit'
 import { useLogIngestion } from './useLogIngestion'
 import { ErrorScreen } from './ErrorScreen'
 import { SwimLaneGrid } from './components/SwimLaneGrid'
+import { ModeToggle } from './components/ModeToggle'
+import { StreamEndIndicator } from './components/StreamEndIndicator'
+import { UnparseablePanel } from './components/UnparseablePanel'
 
 function App() {
   const init = useAppInit()
@@ -58,14 +61,8 @@ function AppShell({ config, lanes, masterList }: AppShellProps) {
   return (
     <div className="app-layout">
       <div className="app-toolbar">
-        {/* ModeToggle placeholder -- will be implemented in Sub-phase 5C */}
-        <span className="text-xs text-muted">Mode: {mode}</span>
-        {streamEnded && (
-          <span className="stream-ended">
-            <span className="stream-ended__dot" />
-            Stream ended
-          </span>
-        )}
+        <ModeToggle mode={mode} onModeChange={setMode} />
+        <StreamEndIndicator visible={streamEnded} />
       </div>
       <div className="app-main">
         <SwimLaneGrid
@@ -79,10 +76,7 @@ function AppShell({ config, lanes, masterList }: AppShellProps) {
         />
       </div>
       {unparseableEntries.length > 0 && (
-        // UnparseablePanel placeholder -- will be implemented in Sub-phase 5C
-        <div className="text-xs text-muted" style={{ padding: 'var(--space-2) var(--space-4)' }}>
-          Unparseable: {unparseableEntries.length}
-        </div>
+        <UnparseablePanel entries={unparseableEntries} />
       )}
     </div>
   )

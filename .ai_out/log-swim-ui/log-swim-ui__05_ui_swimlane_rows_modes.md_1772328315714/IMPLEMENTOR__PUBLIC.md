@@ -1,4 +1,4 @@
-# Phase 05 Sub-phases 5A + 5B: Implementation Summary
+# Phase 05: UI -- Swimlane Layout, Rows & Modes -- Implementation Summary
 
 ## Sub-phase 5A: Core App Shell + State + IPC Wiring (COMPLETE)
 
@@ -6,51 +6,61 @@ All acceptance criteria met. See previous version for details.
 
 ## Sub-phase 5B: Swimlane Grid + Virtualization + LogRow (COMPLETE)
 
+All acceptance criteria met. See previous version for details.
+
+## Sub-phase 5C: ModeToggle + StreamEndIndicator + UnparseablePanel (COMPLETE)
+
 ### What Was Implemented
 
-Sub-phase 5B -- Swimlane Grid with CSS Grid layout, @tanstack/react-virtual virtualization, lane headers, log rows with expand/collapse and level colorization.
+Sub-phase 5C -- the three remaining UI components: ModeToggle (pill-shaped Live/Scroll toggle), StreamEndIndicator (subtle badge when stdin closes), and UnparseablePanel (bottom panel for failed timestamp entries). Also extracted scroll-up detection to a pure function with unit tests.
 
 ### New Files
 
 | File | Purpose |
 |------|---------|
-| `src/renderer/src/log-row-utils.ts` | Pure functions: `getLevelCssClass`, `getMessagePreview`, `getGridColumn`, `getTotalLaneCount` |
-| `src/renderer/src/components/LaneHeader.tsx` | Lane header with regex pattern, truncation, tooltip, error/unmatched states |
-| `src/renderer/src/components/LogRow.tsx` | Virtualized log row with level colorization, timestamp formatting, expand/collapse |
-| `src/renderer/src/components/SwimLaneGrid.tsx` | CSS Grid + @tanstack/react-virtual virtualization container, lane headers, auto-scroll, scroll-up detection |
-| `tests/unit/renderer/log-row-utils.test.ts` | 27 tests covering all pure utility functions |
+| `src/renderer/src/components/ModeToggle.tsx` | Pill-shaped toggle for Live/Scroll view modes using `.mode-toggle` CSS classes |
+| `src/renderer/src/components/StreamEndIndicator.tsx` | Subtle badge with dot indicator and "Stream ended" text |
+| `src/renderer/src/components/UnparseablePanel.tsx` | Bottom panel showing count badge and scrollable list of raw JSON strings |
+| `src/renderer/src/scroll-utils.ts` | Pure function `isScrollingUp(lastTop, currentTop, threshold)` |
+| `tests/unit/renderer/scroll-utils.test.ts` | 8 tests covering scroll-up detection with threshold logic |
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/renderer/src/App.tsx` | Replaced placeholder div with `SwimLaneGrid` component; added `setMode` from `useLogIngestion`; added unparseable entries placeholder in app-layout |
+| `src/renderer/src/App.tsx` | Replaced placeholder `<span>` with `<ModeToggle>`, replaced inline stream-ended `<span>` with `<StreamEndIndicator>`, replaced placeholder unparseable `<div>` with `<UnparseablePanel>` |
+| `src/renderer/src/components/SwimLaneGrid.tsx` | Extracted scroll-up detection to use `isScrollingUp()` from `scroll-utils.ts` |
 
 ### Design Decisions
 
-1. **Single virtualizer with full-width rows**: Each virtual row spans all grid columns. Content is placed in the correct lane column via CSS `gridColumn`. This avoids multiple virtualizers or complex column synchronization.
+1. **ModeToggle uses `<button>` elements**: Two buttons ("Live" and "Scroll") inside a `.mode-toggle` container. Active mode button receives `.mode-toggle__option--active` class. Buttons use `type="button"` to prevent form submission.
 
-2. **Inline styles limited to three data-driven cases**: (a) `gridTemplateColumns` on swimlane-grid (dynamic lane count), (b) `gridColumn` on log row content (data-driven lane assignment), (c) virtual row positioning (required by @tanstack/virtual). All three have `// WHY` comments explaining the necessity.
+2. **StreamEndIndicator has `visible` prop**: The component handles its own conditional rendering (returns `null` when not visible). This keeps the parent clean -- just pass `visible={streamEnded}` without wrapping in a conditional.
 
-3. **Expanded row estimation**: Uses `estimateSize` returning `rowHeight * 6` for expanded rows as a reasonable estimate. The virtualizer's `measureElement` ref is attached to each row's container div for dynamic re-measurement after expand.
+3. **UnparseablePanel uses index as key**: The entries list is append-only (capped at 1000) and items are never reordered or removed, so array index as key is safe and appropriate here.
 
-4. **Scroll-up detection**: Implemented inline in SwimLaneGrid with a 5px threshold. Uses a ref to track `lastScrollTop`. When scroll delta exceeds the threshold in live mode, calls `onScrollUp()` which sets mode to 'scroll' in the parent.
+4. **Scroll-up detection extracted**: The inline delta comparison in SwimLaneGrid was replaced with a call to `isScrollingUp()` from `scroll-utils.ts`. The function is a pure comparison (`delta > threshold`), making it trivially testable. The threshold constant (`SCROLL_UP_THRESHOLD_PX = 5`) remains in SwimLaneGrid as it is a component-level concern.
 
-5. **LaneHeader drag handle**: Rendered as visual indicator only (braille pattern Unicode char). Non-functional in Phase 05; will be wired in Phase 06.
+5. **Live mode scroll-to-bottom on mode change**: No new `useEffect` was added for mode changes. The existing `useEffect` in SwimLaneGrid keyed on `[version, mode]` already handles scrolling to bottom whenever mode becomes 'live', regardless of whether the trigger was a mode toggle click or a version increment.
 
-6. **Message preview priority**: `fields.message` > `fields.msg` > truncated `rawJson`. Non-string values in `message`/`msg` fields are skipped (falls through to rawJson).
+### Acceptance Criteria Status
 
-7. **Level CSS class normalization**: Input level is lowercased before matching against the known levels set. This ensures `"WARN"`, `"Warn"`, and `"warn"` all map to `log-row--warn`.
-
-### What Is NOT Done (deferred to 5C)
-
-- ModeToggle component (placeholder text in App.tsx toolbar)
-- StreamEndIndicator as proper component (inline span used)
-- UnparseablePanel component (placeholder text in app-layout)
-- Scroll-up detection pure function extraction (inlined in SwimLaneGrid for simplicity)
+- [x] ModeToggle renders pill-shaped toggle with Live/Scroll options
+- [x] Active mode button has `mode-toggle__option--active` class
+- [x] Clicking Live mode scrolls to bottom (via existing useEffect on [version, mode])
+- [x] Clicking Scroll mode freezes scroll position
+- [x] Scrolling up auto-switches from Live to Scroll (via isScrollingUp in SwimLaneGrid)
+- [x] StreamEndIndicator appears when stream ends
+- [x] UnparseablePanel appears when there are unparseable entries, hidden when none
+- [x] UnparseablePanel shows count badge and scrollable list of raw JSON
+- [x] ErrorScreen shows for stream-error with error message (from 5A)
+- [x] ErrorScreen shows for config-error with "Revert to defaults" button (from 5A)
+- [x] "Revert to defaults" saves DEFAULT_APP_CONFIG and reloads (from 5A)
+- [x] `npm test` passes: 180 tests (14 test files)
+- [x] `npm run typecheck` passes: 0 errors
 
 ### Verification
 
-- `npm test`: 172 tests pass (13 test files), including 27 new log-row-utils tests
+- `npm test`: 180 tests pass (14 test files), including 8 new scroll-utils tests
 - `npm run typecheck`: Clean (0 errors)
 - No existing tests were modified, skipped, or removed

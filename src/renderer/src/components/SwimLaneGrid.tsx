@@ -5,6 +5,7 @@ import { MasterList } from '@core/master-list'
 import { LaneHeader } from './LaneHeader'
 import { LogRow } from './LogRow'
 import { getTotalLaneCount } from '../log-row-utils'
+import { isScrollingUp } from '../scroll-utils'
 
 const SCROLL_UP_THRESHOLD_PX = 5
 const VIRTUALIZER_OVERSCAN = 20
@@ -61,9 +62,8 @@ function SwimLaneGrid({
     if (scrollRef.current === null) return
 
     const currentScrollTop = scrollRef.current.scrollTop
-    const scrollDelta = lastScrollTopRef.current - currentScrollTop
 
-    if (mode === 'live' && scrollDelta > SCROLL_UP_THRESHOLD_PX) {
+    if (mode === 'live' && isScrollingUp(lastScrollTopRef.current, currentScrollTop, SCROLL_UP_THRESHOLD_PX)) {
       onScrollUp()
     }
 
