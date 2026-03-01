@@ -162,7 +162,7 @@ describe('GIVEN a log entry with level "error"', () => {
 - Use CSS classes that reference custom property tokens.
 
 ### Runtime Config Override
-- `applyConfigToCSS(config)` maps `config.json` values to CSS custom properties at runtime via `document.documentElement.style.setProperty()`. Stub exists; will be wired in Phase 04.
+- `applyConfigToCSS(config)` maps `config.json` values to CSS custom properties at runtime via `document.documentElement.style.setProperty()`. Function is implemented but not yet invoked by the renderer. Will be wired when the renderer consumes config via `window.api.getConfig()` (Phase 05+).
 
 ---
 
@@ -181,7 +181,7 @@ describe('GIVEN a log entry with level "error"', () => {
 - `console.log` is acceptable in:
   - Tests
   - Dev scripts
-  - The `bin/log-swim-ui.js` stub (temporary)
+  - `bin/log-swim-ui.js` (CJS entry point, spawns Electron)
 - In production code, use structured logging with key-value pairs, not string interpolation.
 
 ---
@@ -191,12 +191,13 @@ describe('GIVEN a log entry with level "error"', () => {
 ```
 src/
   main/          # Electron main process (Node.js context)
-                 # - Window creation, app lifecycle
-                 # - stdin reading, IPC to renderer
-                 # - Config file management
+                 # - index.ts: App startup orchestration (TTY check, CLI parse, config load, IPC handlers, bridge start)
+                 # - cli-parser.ts: CliParser (static) -- parse --key-level, --key-timestamp, --lanes
+                 # - config-manager.ts: ConfigManager (static) -- load/validate/merge/save config, ConfigValidator (static)
+                 # - ipc-bridge.ts: IpcBridge -- stdin → JsonParser → TimestampDetector → IPC send pipeline
   preload/       # Preload scripts (bridge between main and renderer)
-                 # - contextBridge API exposure
-                 # - IPC channel definitions
+                 # - index.ts: contextBridge API -- whitelisted IPC channel exposure
+                 # - electron-api.d.ts: TypeScript declaration for window.api
   renderer/      # React renderer process (browser context)
     src/         # React components, hooks, styles
     theme/       # CSS design system
@@ -225,10 +226,12 @@ out/             # Build output (gitignored)
 |-----------|----------------|-------------------|
 | `src/core/` | Standard lib only (Node.js APIs allowed but see note below) | `electron`, `react`, `src/main/`, `src/renderer/` |
 | `src/main/` | `src/core/`, `electron`, Node.js APIs | `react`, `src/renderer/` |
-| `src/preload/` | `electron` (contextBridge) | `react`, `src/renderer/`, `src/core/` |
+| `src/preload/` | `electron` (contextBridge), `src/core/types.ts` (types and constants only) | `react`, `src/renderer/` |
 | `src/renderer/` | `src/core/`, `react`, `react-dom` | `electron` (use preload bridge), `src/main/` |
 
-**Note:** `src/core/stdin-reader.ts` imports `node:stream` and `node:readline` (Node.js-only APIs). It is excluded from `tsconfig.web.json` so it does not break browser-context compilation. It will be used only in `src/main/` (Electron main process) in Phase 04.
+**Note:** `src/core/stdin-reader.ts` imports `node:stream` and `node:readline` (Node.js-only APIs). It is excluded from `tsconfig.web.json` so it does not break browser-context compilation. It is used only in `src/main/` (Electron main process).
+
+**Note:** `src/preload/` imports `IPC_CHANNELS` (constant) and `ElectronApi` (type) from `src/core/types.ts`. This is DRY -- avoids duplicating IPC channel name strings across process boundaries. Only types and compile-time constants are allowed; no runtime logic imports.
 
 ---
 
