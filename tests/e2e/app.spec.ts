@@ -196,6 +196,18 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
       await expect(page.locator('.stream-ended')).toHaveCount(1)
       await expect(page.locator('.stream-ended')).toContainText('Stream ended')
     })
+
+    test('THEN mode switches to Scroll', async () => {
+      // Verify default mode is Live before stream end
+      const activeOption = page.locator('.mode-toggle__option--active')
+      await expect(activeOption).toHaveText('Live')
+
+      // Send stream end signal
+      await sendStreamEnd(electronApp)
+
+      // Mode should auto-switch to Scroll
+      await expect(activeOption).toHaveText('Scroll')
+    })
   })
 
   test.describe('WHEN the settings gear icon is clicked', () => {

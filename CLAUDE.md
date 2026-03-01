@@ -209,7 +209,7 @@ src/
                  # - ErrorScreen.tsx: Full-screen error display with config revert action
                  # - DesignReferencePage.tsx: Dev-only design system reference (not rendered by App.tsx)
                  # - useAppInit.ts: Init hook -- load config, CLI args, create MasterList, apply CSS tokens
-                 # - useLogIngestion.ts: IPC wiring + log state (version, stream state, unparseable, view mode); accepts lanesRef + configRef for stable IPC callbacks; signals RENDERER_READY after all listeners registered
+                 # - useLogIngestion.ts: IPC wiring + log state (version, stream state, unparseable, view mode); accepts lanesRef + configRef for stable IPC callbacks; signals RENDERER_READY after all listeners registered; auto-switches to Scroll mode on stream end
                  # - timestamp-formatter.ts: Format timestamps (iso, local, relative)
                  # - ipc-converters.ts: Convert IPC types (IpcLogLine) to renderer types (LogEntry)
                  # - log-row-utils.ts: Pure display utilities for LogRow (CSS class, message preview, grid column)
@@ -244,7 +244,7 @@ src/
 tests/
   unit/          # Vitest unit tests
   e2e/           # Playwright E2E tests
-                 # - app.spec.ts: 14 E2E test cases (lane headers, log rows, expand/collapse, filtering, lane add, mode toggle, stream-end, settings panel)
+                 # - app.spec.ts: 15 E2E test cases (lane headers, log rows, expand/collapse, filtering, lane add, mode toggle, stream-end mode switch, settings panel)
     helpers/     # E2E test utilities
                  # - electron-app.ts: launchApp, injectLogLines, sendStreamEnd, waitForFlush, createIpcLogLine
 bin/             # CLI entry point (npm global install)
