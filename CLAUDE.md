@@ -205,9 +205,13 @@ src/
                  # - design-reference.css: Dev-only styles for DesignReferencePage
     index.html   # HTML entry point
   core/          # Shared pure logic (no Electron or React imports)
-                 # - Types, data structures
-                 # - Classification logic
-                 # - Parsing utilities
+                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, StdinMessage
+                 # - json-parser.ts: JsonParser (static) -- raw string → ParsedLine
+                 # - timestamp-detector.ts: TimestampDetector -- detect/lock format, parse timestamps
+                 # - lane-classifier.ts: LaneClassifier (static) -- first-match-wins classification
+                 # - master-list.ts: MasterList -- sorted collection with binary-search insert + eviction
+                 # - log-buffer.ts: LogBuffer -- timer-based flush with callback
+                 # - stdin-reader.ts: StdinReader (static) -- line-by-line Readable stream reading (Node.js only)
 tests/
   unit/          # Vitest unit tests
   e2e/           # Playwright E2E tests
@@ -219,10 +223,12 @@ out/             # Build output (gitignored)
 
 | Directory | Can import from | Cannot import from |
 |-----------|----------------|-------------------|
-| `src/core/` | Standard lib only | `electron`, `react`, `src/main/`, `src/renderer/` |
+| `src/core/` | Standard lib only (Node.js APIs allowed but see note below) | `electron`, `react`, `src/main/`, `src/renderer/` |
 | `src/main/` | `src/core/`, `electron`, Node.js APIs | `react`, `src/renderer/` |
 | `src/preload/` | `electron` (contextBridge) | `react`, `src/renderer/`, `src/core/` |
 | `src/renderer/` | `src/core/`, `react`, `react-dom` | `electron` (use preload bridge), `src/main/` |
+
+**Note:** `src/core/stdin-reader.ts` imports `node:stream` and `node:readline` (Node.js-only APIs). It is excluded from `tsconfig.web.json` so it does not break browser-context compilation. It will be used only in `src/main/` (Electron main process) in Phase 04.
 
 ---
 

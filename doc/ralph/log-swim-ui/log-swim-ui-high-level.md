@@ -161,10 +161,24 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 
 | Type/Interface | Purpose | Location | Key Fields/Methods |
 |----------------|---------|----------|-------------------|
-| `LogEntry` | Parsed log line | `src/core/types.ts` | `rawJson, timestamp, level, laneIndex, fields` |
-| `LaneDefinition` | A single lane config | `src/core/types.ts` | `regex: RegExp, pattern: string, isError: boolean` |
+| `LogEntry` | Parsed log line | `src/core/types.ts` | `rawJson, fields, timestamp, level, laneIndex` |
+| `LaneDefinition` | A single lane config | `src/core/types.ts` | `pattern: string, regex: RegExp \| null, isError: boolean` |
+| `ParsedLine` | JSON parse result (discriminated union) | `src/core/types.ts` | `JsonParseSuccess \| JsonParseFailure` |
+| `ParseResult<T>` | Generic ok/error result | `src/core/types.ts` | `{ ok: true, value: T } \| { ok: false, error: string }` |
+| `TimestampFormat` | Detected format union | `src/core/types.ts` | `'iso8601' \| 'epochMillis'` |
 | `AppConfig` | Full app configuration | `src/core/types.ts` | `colors, ui, performance` (mirrors config.json) |
 | `StdinMessage` (IPC) | Main→Renderer log data | `src/core/types.ts` | `type: 'line' \| 'end' \| 'error', data` |
+
+### Core Pipeline Classes (Phase 03)
+
+| Class | Kind | Location | Purpose |
+|-------|------|----------|---------|
+| `JsonParser` | static | `src/core/json-parser.ts` | Parse raw string → `ParsedLine`. Never throws. |
+| `TimestampDetector` | stateful | `src/core/timestamp-detector.ts` | Detect/lock format on first value, parse subsequent values. |
+| `LaneClassifier` | static | `src/core/lane-classifier.ts` | First-match-wins classification + batch re-classification. |
+| `MasterList` | stateful | `src/core/master-list.ts` | Sorted collection with binary-search insert + eviction. |
+| `LogBuffer` | stateful | `src/core/log-buffer.ts` | Timer-based flush with callback. Final flush on close. |
+| `StdinReader` | static | `src/core/stdin-reader.ts` | Line-by-line Readable stream reading (Node.js only). |
 
 ## Components / Architecture
 
@@ -341,6 +355,14 @@ $HOME/.config/log-swim-ui/config.json
 | WHAT | WHY-ItsCalledOut | WHY-ItWasDone |
 |------|-----------------|---------------|
 | Design memory files (`my-frontend-design.md`, parts 2-8) were not available on this system | The task explicitly instructs loading these files for design decisions. Their absence means the design system was built without the canonical UI design memory. | Design principles from the task document and high-level spec were sufficient to produce 96 tokens, component CSS, and a verified design reference page. Results should be reviewed for alignment with design memory when available. |
+
+### Phase 03: Core Data Pipeline
+
+| WHAT | WHY-ItsCalledOut | WHY-ItWasDone |
+|------|-----------------|---------------|
+| `StdinReader` listens for errors on `rl` (readline Interface) instead of raw `input` stream | The task spec implied `input.on('error', ...)`. This is a deviation from the plan. | Node.js `readline.createInterface()` re-emits input stream errors on the Interface instance. Listening on the raw input would miss these propagated errors. |
+| `stdin-reader.ts` excluded from `tsconfig.web.json` | It imports `node:stream` and `node:readline`, which are unavailable in browser context. | The file is used only in `src/main/` (Electron main process). Excluding it from the web tsconfig prevents compilation errors in the renderer build. |
+| `DEFAULT_APP_CONFIG` color values differ from high-level spec defaults | The spec lists specific hex values; implementation uses a slightly different palette. | Phase 04 (config system) will reconcile defaults with the spec. No user-facing impact until then. |
 
 ## Open Questions
 - None — all requirements confirmed.
