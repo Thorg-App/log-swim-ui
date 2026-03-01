@@ -168,6 +168,25 @@ const DEFAULT_APP_CONFIG: AppConfig = {
   }
 }
 
+// --- Known Log Levels ---
+// Single source of truth for recognized log level names.
+// Referenced by: log-row-utils (CSS class mapping), applyConfigToCSS (CSS variable mapping),
+// and components.css (static CSS rules -- must be kept in sync manually).
+
+const KNOWN_LOG_LEVELS = [
+  'trace',
+  'debug',
+  'info',
+  'notice',
+  'warn',
+  'warning',
+  'error',
+  'fatal',
+  'critical'
+] as const
+
+type KnownLogLevel = (typeof KNOWN_LOG_LEVELS)[number]
+
 // --- View Mode ---
 
 const VIEW_MODES = ['live', 'scroll'] as const
@@ -199,7 +218,8 @@ export type {
   AppConfigPerformance,
   AppConfig,
   ViewMode,
-  AppErrorType
+  AppErrorType,
+  KnownLogLevel
 }
 
 export {
@@ -209,5 +229,6 @@ export {
   APP_ERROR_TYPES,
   IPC_CHANNELS,
   DEFAULT_APP_CONFIG,
+  KNOWN_LOG_LEVELS,
   createLaneDefinition
 }

@@ -1,18 +1,9 @@
 import type { LogEntry, LaneDefinition } from '@core/types'
+import { KNOWN_LOG_LEVELS } from '@core/types'
 
-// --- Known Log Levels ---
+// --- Known Log Levels (derived Set for O(1) lookup) ---
 
-const KNOWN_LOG_LEVELS = new Set([
-  'trace',
-  'debug',
-  'info',
-  'notice',
-  'warn',
-  'warning',
-  'error',
-  'fatal',
-  'critical'
-])
+const KNOWN_LOG_LEVELS_SET: ReadonlySet<string> = new Set(KNOWN_LOG_LEVELS)
 
 const DEFAULT_MESSAGE_MAX_LENGTH = 200
 
@@ -25,7 +16,7 @@ const DEFAULT_MESSAGE_MAX_LENGTH = 200
  */
 function getLevelCssClass(level: string): string {
   const normalized = level.toLowerCase()
-  if (KNOWN_LOG_LEVELS.has(normalized)) {
+  if (KNOWN_LOG_LEVELS_SET.has(normalized)) {
     return `log-row--${normalized}`
   }
   return 'log-row--unrecognized'
@@ -77,4 +68,4 @@ function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength) + '\u2026' // Unicode ellipsis
 }
 
-export { getLevelCssClass, getMessagePreview, getGridColumn, getTotalLaneCount, KNOWN_LOG_LEVELS }
+export { getLevelCssClass, getMessagePreview, getGridColumn, getTotalLaneCount }
