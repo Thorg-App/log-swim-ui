@@ -162,7 +162,7 @@ describe('GIVEN a log entry with level "error"', () => {
 - Use CSS classes that reference custom property tokens.
 
 ### Runtime Config Override
-- `applyConfigToCSS(config)` maps `config.json` values to CSS custom properties at runtime via `document.documentElement.style.setProperty()`. Function is implemented but not yet invoked by the renderer. Will be wired when the renderer consumes config via `window.api.getConfig()` (Phase 05+).
+- `applyConfigToCSS(config: AppConfig)` maps config values to CSS custom properties at runtime via `document.documentElement.style.setProperty()`. Called by `useAppInit` after loading config via `window.api.getConfig()`. Derives level CSS variable names mechanically from `KNOWN_LOG_LEVELS` (single source of truth in `src/core/types.ts`).
 
 ---
 
@@ -199,14 +199,32 @@ src/
                  # - index.ts: contextBridge API -- whitelisted IPC channel exposure
                  # - electron-api.d.ts: TypeScript declaration for window.api
   renderer/      # React renderer process (browser context)
-    src/         # React components, hooks, styles
+    src/         # React app, hooks, utilities
+                 # - main.tsx: React entry point (renders App into DOM)
+                 # - App.tsx: Top-level state machine (loading → error | ready), wires hooks to components
+                 # - ErrorScreen.tsx: Full-screen error display with config revert action
+                 # - DesignReferencePage.tsx: Dev-only design system reference (not rendered by App.tsx)
+                 # - useAppInit.ts: Init hook -- load config, CLI args, create MasterList, apply CSS tokens
+                 # - useLogIngestion.ts: IPC wiring + log state (version, stream state, unparseable, view mode)
+                 # - timestamp-formatter.ts: Format timestamps (iso, local, relative)
+                 # - ipc-converters.ts: Convert IPC types (IpcLogLine) to renderer types (LogEntry)
+                 # - log-row-utils.ts: Pure display utilities for LogRow (CSS class, message preview, grid column)
+                 # - scroll-utils.ts: Pure scroll-up detection function
+                 # - applyConfigToCSS.ts: Map AppConfig values to CSS custom properties at runtime
+      components/  # React components
+                 # - SwimLaneGrid.tsx: Virtualized CSS grid with @tanstack/react-virtual, auto-scroll
+                 # - LogRow.tsx: Single log row (collapsed/expanded), colored left border by level
+                 # - LaneHeader.tsx: Lane column header (regex pattern with truncation)
+                 # - ModeToggle.tsx: Pill-shaped Live/Scroll toggle
+                 # - StreamEndIndicator.tsx: Subtle badge shown when stdin closes
+                 # - UnparseablePanel.tsx: Bottom panel for failed-timestamp entries
     theme/       # CSS design system
                  # - tokens.css: CSS custom properties (:root)
                  # - components.css: Structural component classes (zero hardcoded values)
                  # - design-reference.css: Dev-only styles for DesignReferencePage
     index.html   # HTML entry point
   core/          # Shared pure logic (no Electron or React imports)
-                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS, ElectronApi, CliArgsResult, KNOWN_LOG_LEVELS
+                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS, ElectronApi, CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType
                  # - json-parser.ts: JsonParser (static) -- raw string → ParsedLine
                  # - timestamp-detector.ts: TimestampDetector -- detect/lock format, parse timestamps
                  # - lane-classifier.ts: LaneClassifier (static) -- first-match-wins classification
