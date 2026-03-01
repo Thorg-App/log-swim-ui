@@ -91,8 +91,9 @@ function useLogIngestion(
       unsubConfigError()
       logBuffer.close() // idempotent -- safe even if onStreamEnd already called it
     }
-    // WHY: lanesRef is a stable ref object -- NOT included as dependency.
-    // Lane changes are picked up at invocation time via lanesRef.current.
+    // WHY: lanesRef is a stable ref object -- its identity never changes, so including it
+    // in the dependency array does NOT cause re-runs. Lane changes are picked up at
+    // invocation time via lanesRef.current inside the onLogLine callback.
     // config stability is assumed (never changes after init; Phase 07 may need ref pattern too).
   }, [masterList, lanesRef, config])
 

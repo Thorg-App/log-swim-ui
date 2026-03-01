@@ -165,8 +165,8 @@ body {
 
 /* Drop target indicator during lane drag */
 .lane-header--drag-over {
-  background-color: var(--color-surface-hover, var(--color-grey-600));
-  border-left: var(--border-width-thick) solid var(--color-accent, var(--color-grey-400));
+  background-color: var(--color-surface-hover);
+  border-left: var(--border-width-thick) solid var(--color-accent);
 }
 
 /* Hidden drag handle for unmatched lane (preserves spacing) */
@@ -284,7 +284,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: var(--filter-chip-label-max-width);
 }
 
 /* Inline filter creation form */
