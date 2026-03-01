@@ -20,10 +20,10 @@ class TimestampDetector {
    */
   detectAndLock(value: unknown): Date {
     if (typeof value === 'string') {
-      const time = Date.parse(value)
-      if (!Number.isNaN(time)) {
+      const result = TimestampDetector.tryParseIso8601(value)
+      if (result !== null) {
         this.lockedFormat = 'iso8601'
-        return new Date(time)
+        return result
       }
       throw new Error(
         `Cannot detect timestamp format: string value "${value}" is not a valid ISO 8601 date`
@@ -31,7 +31,7 @@ class TimestampDetector {
     }
 
     if (typeof value === 'number') {
-      if (value > 0 && value < EPOCH_MILLIS_UPPER_BOUND) {
+      if (TimestampDetector.isValidEpochMillis(value)) {
         this.lockedFormat = 'epochMillis'
         return new Date(value)
       }
@@ -60,18 +60,18 @@ class TimestampDetector {
       if (typeof value !== 'string') {
         return { ok: false, error: `Expected string for iso8601 format, got ${typeof value}` }
       }
-      const time = Date.parse(value)
-      if (Number.isNaN(time)) {
+      const date = TimestampDetector.tryParseIso8601(value)
+      if (date === null) {
         return { ok: false, error: `Invalid ISO 8601 date string: "${value}"` }
       }
-      return { ok: true, value: new Date(time) }
+      return { ok: true, value: date }
     }
 
     // lockedFormat === 'epochMillis'
     if (typeof value !== 'number') {
       return { ok: false, error: `Expected number for epochMillis format, got ${typeof value}` }
     }
-    if (value <= 0 || value >= EPOCH_MILLIS_UPPER_BOUND) {
+    if (!TimestampDetector.isValidEpochMillis(value)) {
       return {
         ok: false,
         error: `Epoch millis value ${value} is outside valid range (0, ${EPOCH_MILLIS_UPPER_BOUND})`
@@ -85,6 +85,26 @@ class TimestampDetector {
    */
   getLockedFormat(): TimestampFormat | null {
     return this.lockedFormat
+  }
+
+  /**
+   * Single source of truth: what constitutes a valid epoch millis value.
+   * Valid range is exclusive: (0, EPOCH_MILLIS_UPPER_BOUND).
+   */
+  private static isValidEpochMillis(value: number): boolean {
+    return value > 0 && value < EPOCH_MILLIS_UPPER_BOUND
+  }
+
+  /**
+   * Single source of truth: how to parse an ISO 8601 string into a Date.
+   * Returns the Date on success, or null if the string is not a valid ISO 8601 date.
+   */
+  private static tryParseIso8601(value: string): Date | null {
+    const time = Date.parse(value)
+    if (Number.isNaN(time)) {
+      return null
+    }
+    return new Date(time)
   }
 }
 
