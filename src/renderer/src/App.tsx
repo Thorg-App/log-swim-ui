@@ -116,7 +116,7 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
     [lanes, applyLaneChange]
   )
 
-  // --- Filter handlers (used by FilterBar in 6C) ---
+  // --- Filter handlers (used by FilterBar) ---
 
   const handleAddFilter = useCallback(
     (filter: Filter) => {
@@ -136,6 +136,24 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
     (id: string) => {
       setFilters((prev) =>
         prev.map((f) => (f.id === id ? FilterEngine.toggleFilter(f) : f))
+      )
+    },
+    []
+  )
+
+  const handleToggleMode = useCallback(
+    (id: string) => {
+      setFilters((prev) =>
+        prev.map((f) => (f.id === id ? FilterEngine.toggleMode(f) : f))
+      )
+    },
+    []
+  )
+
+  const handleToggleCaseSensitivity = useCallback(
+    (id: string) => {
+      setFilters((prev) =>
+        prev.map((f) => (f.id === id ? FilterEngine.toggleCaseSensitivity(f) : f))
       )
     },
     []
@@ -186,8 +204,16 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
   return (
     <>
       <div className="app-layout">
+        <FilterBar
+          filters={filters}
+          onAddFilter={handleAddFilter}
+          onRemoveFilter={handleRemoveFilter}
+          onToggleFilter={handleToggleFilter}
+          onToggleMode={handleToggleMode}
+          onToggleCaseSensitivity={handleToggleCaseSensitivity}
+          rightSlot={<ModeToggle mode={mode} onModeChange={setMode} />}
+        />
         <div className="app-toolbar">
-          <ModeToggle mode={mode} onModeChange={setMode} />
           <LaneAddInput onAddLane={handleAddLane} />
           <StreamEndIndicator visible={streamEnded} />
           <button
@@ -199,12 +225,6 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
             ⚙
           </button>
         </div>
-        <FilterBar
-          filters={filters}
-          onAddFilter={handleAddFilter}
-          onRemoveFilter={handleRemoveFilter}
-          onToggleFilter={handleToggleFilter}
-        />
         <div className="app-main">
           <SwimLaneGrid
             masterList={masterList}

@@ -219,8 +219,8 @@ src/
                  # - SwimLaneGrid.tsx: Virtualized CSS grid with @tanstack/react-virtual, auto-scroll, filtering, lane DnD reorder
                  # - LogRow.tsx: Single log row (collapsed/expanded), colored left border by level
                  # - LaneHeader.tsx: Lane column header (regex pattern with truncation, drag handle for reorder)
-                 # - FilterBar.tsx: Filter management bar with inline add form (field/raw filter types)
-                 # - FilterChip.tsx: Individual filter toggle/remove chip with visual states
+                 # - FilterBar.tsx: "Global Filter" bar (topmost row) with inline add form, include/exclude mode toggle, case sensitivity toggle, rightSlot for ModeToggle
+                 # - FilterChip.tsx: Individual filter chip with mode indicator (+/-), case sensitivity indicator (Aa/aa), toggle/remove, exclude styling
                  # - LaneAddInput.tsx: Ad-hoc lane regex input (insert before unmatched)
                  # - ModeToggle.tsx: Pill-shaped Live/Scroll toggle
                  # - StreamEndIndicator.tsx: Subtle badge shown when stdin closes
@@ -234,7 +234,7 @@ src/
   core/          # Shared pure logic (no Electron or React imports)
                  # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS (incl. RESET_CONFIG, RENDERER_READY), ElectronApi (incl. resetConfig, signalReady), CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType, CONFIG_CONSTRAINTS, createLaneDefinition
                  # - config-validation.ts: Pure validation helpers for config fields (isValidHexColor, isInRange, HEX_COLOR_PATTERN)
-                 # - filter.ts: FilterEngine (static) -- create/toggle/match filters; Filter discriminated union (FieldFilter | RawFilter)
+                 # - filter.ts: FilterEngine (static) -- create/toggle/match filters, toggleMode(), toggleCaseSensitivity(); Filter discriminated union (FieldFilter | RawFilter) with FilterMode (include|exclude), FilterOptions (mode, caseSensitive), FILTER_MODES
                  # - json-parser.ts: JsonParser (static) -- raw string → ParsedLine
                  # - timestamp-detector.ts: TimestampDetector -- detect/lock format, parse timestamps
                  # - lane-classifier.ts: LaneClassifier (static) -- first-match-wins classification

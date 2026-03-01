@@ -379,6 +379,337 @@ describe('FilterEngine.matchesAllFilters', () => {
   })
 })
 
+// --- Default mode and caseSensitive ---
+
+describe('FilterEngine default mode and caseSensitive', () => {
+  describe('GIVEN createRawFilter is called without options', () => {
+    it('THEN defaults to mode=include and caseSensitive=false', () => {
+      const filter = FilterEngine.createRawFilter('error')
+
+      expect(filter.mode).toBe('include')
+      expect(filter.caseSensitive).toBe(false)
+    })
+
+    it('THEN compiles regex with case-insensitive flag', () => {
+      const filter = FilterEngine.createRawFilter('error')
+
+      expect(filter.regex).toBeInstanceOf(RegExp)
+      expect(filter.regex!.flags).toContain('i')
+    })
+  })
+
+  describe('GIVEN createFieldFilter is called without options', () => {
+    it('THEN defaults to mode=include and caseSensitive=false', () => {
+      const filter = FilterEngine.createFieldFilter('level', 'warn')
+
+      expect(filter.mode).toBe('include')
+      expect(filter.caseSensitive).toBe(false)
+    })
+  })
+
+  describe('GIVEN createRawFilter is called with explicit options', () => {
+    it('THEN uses provided mode and caseSensitive values', () => {
+      const filter = FilterEngine.createRawFilter('error', {
+        mode: 'exclude',
+        caseSensitive: true
+      })
+
+      expect(filter.mode).toBe('exclude')
+      expect(filter.caseSensitive).toBe(true)
+      expect(filter.regex!.flags).not.toContain('i')
+    })
+  })
+
+  describe('GIVEN createFieldFilter is called with explicit options', () => {
+    it('THEN uses provided mode and caseSensitive values', () => {
+      const filter = FilterEngine.createFieldFilter('level', 'warn', {
+        mode: 'exclude',
+        caseSensitive: true
+      })
+
+      expect(filter.mode).toBe('exclude')
+      expect(filter.caseSensitive).toBe(true)
+    })
+  })
+})
+
+// --- Case-insensitive matching ---
+
+describe('FilterEngine case-insensitive matching', () => {
+  describe('GIVEN a raw filter with pattern "error" and caseSensitive=false (default)', () => {
+    describe('WHEN matched against entry with "ERROR" in rawJson', () => {
+      it('THEN returns true (case-insensitive match)', () => {
+        const filter = FilterEngine.createRawFilter('error')
+        const entry = makeEntry('{"level":"ERROR","msg":"FAIL"}')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN a raw filter with pattern "error" and caseSensitive=true', () => {
+    describe('WHEN matched against entry with "ERROR" in rawJson', () => {
+      it('THEN returns false (case-sensitive match)', () => {
+        const filter = FilterEngine.createRawFilter('error', { caseSensitive: true })
+        const entry = makeEntry('{"level":"ERROR","msg":"FAIL"}')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(false)
+      })
+    })
+
+    describe('WHEN matched against entry with "error" in rawJson', () => {
+      it('THEN returns true', () => {
+        const filter = FilterEngine.createRawFilter('error', { caseSensitive: true })
+        const entry = makeEntry('{"level":"error","msg":"fail"}')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN a field filter with caseSensitive=false (default)', () => {
+    describe('WHEN matched against entry with different-case field value', () => {
+      it('THEN returns true (case-insensitive match)', () => {
+        const filter = FilterEngine.createFieldFilter('level', 'warn')
+        const entry = makeEntry('{"level":"WARNING"}', { level: 'WARNING' }, 'WARNING')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN a field filter with caseSensitive=true', () => {
+    describe('WHEN matched against entry with different-case field value', () => {
+      it('THEN returns false (case-sensitive match)', () => {
+        const filter = FilterEngine.createFieldFilter('level', 'warn', { caseSensitive: true })
+        const entry = makeEntry('{"level":"WARNING"}', { level: 'WARNING' }, 'WARNING')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(false)
+      })
+    })
+  })
+})
+
+// --- Exclude mode ---
+
+describe('FilterEngine exclude mode', () => {
+  describe('GIVEN a raw exclude filter with pattern "error"', () => {
+    const filter = FilterEngine.createRawFilter('error', { mode: 'exclude' })
+
+    describe('WHEN matched against entry containing "error" in rawJson', () => {
+      it('THEN returns false (exclude inverts the match)', () => {
+        const entry = makeEntry('{"level":"error","msg":"something failed"}')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(false)
+      })
+    })
+
+    describe('WHEN matched against entry without "error" in rawJson', () => {
+      it('THEN returns true (exclude inverts the non-match)', () => {
+        const entry = makeEntry('{"level":"info","msg":"all good"}')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN a field exclude filter on "level" with pattern "debug"', () => {
+    describe('WHEN matched against entry with level "debug"', () => {
+      it('THEN returns false (exclude mode)', () => {
+        const filter = FilterEngine.createFieldFilter('level', 'debug', { mode: 'exclude' })
+        const entry = makeEntry('{"level":"debug"}', { level: 'debug' }, 'debug')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(false)
+      })
+    })
+
+    describe('WHEN matched against entry with level "info"', () => {
+      it('THEN returns true (exclude mode — no match means pass)', () => {
+        const filter = FilterEngine.createFieldFilter('level', 'debug', { mode: 'exclude' })
+        const entry = makeEntry('{"level":"info"}', { level: 'info' }, 'info')
+
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN an exclude filter with null regex (invalid pattern)', () => {
+    describe('WHEN matchesFilter is called', () => {
+      it('THEN returns false (invalid regex never matches, even for exclude)', () => {
+        const filter = FilterEngine.createRawFilter('[invalid', { mode: 'exclude' })
+        const entry = makeEntry('{"level":"error"}')
+
+        expect(filter.regex).toBeNull()
+        expect(FilterEngine.matchesFilter(entry, filter)).toBe(false)
+      })
+    })
+  })
+})
+
+// --- matchesAllFilters with include + exclude mix ---
+
+describe('FilterEngine.matchesAllFilters with include and exclude filters', () => {
+  describe('GIVEN an include filter and an exclude filter that both pass', () => {
+    describe('WHEN matchesAllFilters is called', () => {
+      it('THEN returns true', () => {
+        const entry = makeEntry('{"level":"error","msg":"auth failed"}', {
+          level: 'error',
+          msg: 'auth failed'
+        })
+        const filters: readonly Filter[] = [
+          FilterEngine.createRawFilter('error'), // include: matches
+          FilterEngine.createRawFilter('debug', { mode: 'exclude' }) // exclude: "debug" not in entry -> passes
+        ]
+
+        expect(FilterEngine.matchesAllFilters(entry, filters)).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN an include filter that passes and an exclude filter that fails', () => {
+    describe('WHEN matchesAllFilters is called', () => {
+      it('THEN returns false (exclude filter matched the entry, which means exclude fails)', () => {
+        const entry = makeEntry('{"level":"error","msg":"auth failed"}', {
+          level: 'error',
+          msg: 'auth failed'
+        })
+        const filters: readonly Filter[] = [
+          FilterEngine.createRawFilter('error'), // include: matches
+          FilterEngine.createRawFilter('error', { mode: 'exclude' }) // exclude: "error" matches -> inverted to false
+        ]
+
+        expect(FilterEngine.matchesAllFilters(entry, filters)).toBe(false)
+      })
+    })
+  })
+
+  describe('GIVEN only exclude filters where entry does not match any pattern', () => {
+    describe('WHEN matchesAllFilters is called', () => {
+      it('THEN returns true (all exclude filters pass because patterns not found)', () => {
+        const entry = makeEntry('{"level":"info","msg":"healthy"}')
+        const filters: readonly Filter[] = [
+          FilterEngine.createRawFilter('error', { mode: 'exclude' }),
+          FilterEngine.createRawFilter('fatal', { mode: 'exclude' })
+        ]
+
+        expect(FilterEngine.matchesAllFilters(entry, filters)).toBe(true)
+      })
+    })
+  })
+})
+
+// --- toggleMode ---
+
+describe('FilterEngine.toggleMode', () => {
+  describe('GIVEN an include filter', () => {
+    describe('WHEN toggleMode is called', () => {
+      it('THEN returns a new filter with mode: exclude', () => {
+        const original = FilterEngine.createRawFilter('error')
+        const toggled = FilterEngine.toggleMode(original)
+
+        expect(toggled.mode).toBe('exclude')
+        expect(original.mode).toBe('include') // immutable
+      })
+    })
+  })
+
+  describe('GIVEN an exclude filter', () => {
+    describe('WHEN toggleMode is called', () => {
+      it('THEN returns a new filter with mode: include', () => {
+        const original = FilterEngine.createRawFilter('error', { mode: 'exclude' })
+        const toggled = FilterEngine.toggleMode(original)
+
+        expect(toggled.mode).toBe('include')
+      })
+    })
+  })
+
+  describe('GIVEN any filter', () => {
+    describe('WHEN toggleMode is called', () => {
+      it('THEN preserves all other properties', () => {
+        const original = FilterEngine.createFieldFilter('level', 'warn')
+        const toggled = FilterEngine.toggleMode(original)
+
+        expect(toggled.id).toBe(original.id)
+        expect(toggled.type).toBe('field')
+        expect(toggled.pattern).toBe('warn')
+        expect(toggled.regex).toEqual(original.regex)
+        expect(toggled.enabled).toBe(original.enabled)
+        expect(toggled.caseSensitive).toBe(original.caseSensitive)
+      })
+    })
+  })
+})
+
+// --- toggleCaseSensitivity ---
+
+describe('FilterEngine.toggleCaseSensitivity', () => {
+  describe('GIVEN a case-insensitive filter (default)', () => {
+    describe('WHEN toggleCaseSensitivity is called', () => {
+      it('THEN returns a new filter with caseSensitive: true', () => {
+        const original = FilterEngine.createRawFilter('error')
+        expect(original.caseSensitive).toBe(false)
+
+        const toggled = FilterEngine.toggleCaseSensitivity(original)
+
+        expect(toggled.caseSensitive).toBe(true)
+      })
+
+      it('THEN recompiles regex without the i flag', () => {
+        const original = FilterEngine.createRawFilter('error')
+        expect(original.regex!.flags).toContain('i')
+
+        const toggled = FilterEngine.toggleCaseSensitivity(original)
+
+        expect(toggled.regex!.flags).not.toContain('i')
+      })
+    })
+  })
+
+  describe('GIVEN a case-sensitive filter', () => {
+    describe('WHEN toggleCaseSensitivity is called', () => {
+      it('THEN returns a new filter with caseSensitive: false and i flag', () => {
+        const original = FilterEngine.createRawFilter('error', { caseSensitive: true })
+        expect(original.regex!.flags).not.toContain('i')
+
+        const toggled = FilterEngine.toggleCaseSensitivity(original)
+
+        expect(toggled.caseSensitive).toBe(false)
+        expect(toggled.regex!.flags).toContain('i')
+      })
+    })
+  })
+
+  describe('GIVEN a filter with invalid regex', () => {
+    describe('WHEN toggleCaseSensitivity is called', () => {
+      it('THEN the regex remains null', () => {
+        const original = FilterEngine.createRawFilter('[invalid')
+        expect(original.regex).toBeNull()
+
+        const toggled = FilterEngine.toggleCaseSensitivity(original)
+
+        expect(toggled.regex).toBeNull()
+        expect(toggled.caseSensitive).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN any filter', () => {
+    describe('WHEN toggleCaseSensitivity is called', () => {
+      it('THEN preserves all other properties', () => {
+        const original = FilterEngine.createFieldFilter('level', 'warn')
+        const toggled = FilterEngine.toggleCaseSensitivity(original)
+
+        expect(toggled.id).toBe(original.id)
+        expect(toggled.type).toBe('field')
+        expect(toggled.pattern).toBe('warn')
+        expect(toggled.enabled).toBe(original.enabled)
+        expect(toggled.mode).toBe(original.mode)
+      })
+    })
+  })
+})
+
 // --- resetIdCounter ---
 
 describe('FilterEngine.resetIdCounter', () => {
