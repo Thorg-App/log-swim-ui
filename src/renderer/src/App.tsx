@@ -131,7 +131,7 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
   const handleRemoveLane = useCallback(
     (index: number) => {
       const newLanes = lanes.filter((_, i) => i !== index)
-      applyLaneChange([...newLanes])
+      applyLaneChange(newLanes)
     },
     [lanes, applyLaneChange]
   )
