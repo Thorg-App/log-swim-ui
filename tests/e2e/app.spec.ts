@@ -210,6 +210,96 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
     })
   })
 
+  test.describe('WHEN a lane header pattern is clicked to edit', () => {
+    test('THEN an edit input appears with the current pattern', async () => {
+      // Click the first lane header pattern text
+      const firstPattern = page.locator('[data-testid="lane-header-pattern"]').first()
+      await firstPattern.click()
+
+      // Edit input should appear
+      const editInput = page.locator('[data-testid="lane-header-edit-input"]')
+      await expect(editInput).toHaveCount(1)
+      await expect(editInput).toHaveValue('error')
+    })
+
+    test('THEN pressing Enter with a new pattern updates the lane header', async () => {
+      // Click the first lane header pattern text to enter edit mode
+      const firstPattern = page.locator('[data-testid="lane-header-pattern"]').first()
+      await firstPattern.click()
+
+      // Clear and type new pattern
+      const editInput = page.locator('[data-testid="lane-header-edit-input"]')
+      await editInput.fill('warn|error')
+      await editInput.press('Enter')
+
+      // Verify the lane header now shows the new pattern
+      const updatedPattern = page.locator('[data-testid="lane-header-pattern"]').first()
+      await expect(updatedPattern).toHaveText('warn|error')
+    })
+
+    test('THEN pressing Escape cancels the edit', async () => {
+      // Click the first lane header pattern text to enter edit mode
+      const firstPattern = page.locator('[data-testid="lane-header-pattern"]').first()
+      await firstPattern.click()
+
+      // Type a new value then cancel
+      const editInput = page.locator('[data-testid="lane-header-edit-input"]')
+      await editInput.fill('something-else')
+      await editInput.press('Escape')
+
+      // Verify the original pattern is restored
+      const restoredPattern = page.locator('[data-testid="lane-header-pattern"]').first()
+      await expect(restoredPattern).toHaveText('error')
+    })
+  })
+
+  test.describe('WHEN a lane remove button is clicked', () => {
+    test('THEN the lane is removed and lane count decreases', async () => {
+      // Initially 3 lanes: error, auth, unmatched
+      await expect(page.locator('.lane-header')).toHaveCount(3)
+
+      // Click the remove button on the first lane (error)
+      const removeBtn = page.locator('[data-testid="lane-header-remove"]').first()
+      await removeBtn.click()
+
+      // Now there should be 2 lane headers: auth, unmatched
+      await expect(page.locator('.lane-header')).toHaveCount(2)
+
+      // Verify the remaining lanes
+      const patterns = page.locator('[data-testid="lane-header-pattern"]')
+      await expect(patterns.nth(0)).toHaveText('auth')
+      // Unmatched lane does not have data-testid="lane-header-pattern" (it still has .lane-header__pattern)
+      const unmatchedPattern = page.locator('.lane-header--unmatched .lane-header__pattern')
+      await expect(unmatchedPattern).toHaveText('unmatched')
+    })
+  })
+
+  test.describe('WHEN the case sensitivity toggle is clicked on a lane header', () => {
+    test('THEN the toggle text changes from Aa to aa', async () => {
+      // Initially case sensitive (Aa)
+      const caseToggle = page.locator('[data-testid="lane-header-case-toggle"]').first()
+      await expect(caseToggle).toHaveText('Aa')
+
+      // Click to toggle to case insensitive
+      await caseToggle.click()
+
+      // Should now show "aa"
+      await expect(caseToggle).toHaveText('aa')
+    })
+
+    test('THEN clicking again reverts to case sensitive (Aa)', async () => {
+      const caseToggle = page.locator('[data-testid="lane-header-case-toggle"]').first()
+
+      // Toggle to case insensitive
+      await caseToggle.click()
+      await expect(caseToggle).toHaveText('aa')
+
+      // Toggle back to case sensitive
+      await caseToggle.click()
+      await expect(caseToggle).toHaveText('Aa')
+    })
+  })
+
   test.describe('WHEN the settings gear icon is clicked', () => {
     test('THEN the settings panel and backdrop appear', async () => {
       // Initially no settings panel or backdrop visible

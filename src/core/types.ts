@@ -36,19 +36,28 @@ interface LaneDefinition {
   readonly pattern: string // original regex string from CLI/UI
   readonly regex: RegExp | null // null if pattern failed to compile
   readonly isError: boolean // true if regex compilation failed
+  readonly caseSensitive: boolean // true = default (no flags), false = 'i' flag
+}
+
+interface CreateLaneDefinitionOptions {
+  readonly caseSensitive?: boolean // default: true (backward compatible)
 }
 
 /**
  * Factory function to create a LaneDefinition.
- * Wraps `new RegExp(pattern)` in a try/catch. If compilation fails,
- * returns `{ pattern, regex: null, isError: true }`.
+ * Wraps `new RegExp(pattern, flags)` in a try/catch. If compilation fails,
+ * returns `{ pattern, regex: null, isError: true, caseSensitive }`.
+ *
+ * When `caseSensitive` is false, the regex is compiled with the 'i' flag.
  */
-function createLaneDefinition(pattern: string): LaneDefinition {
+function createLaneDefinition(pattern: string, options?: CreateLaneDefinitionOptions): LaneDefinition {
+  const caseSensitive = options?.caseSensitive ?? true
+  const flags = caseSensitive ? '' : 'i'
   try {
-    const regex = new RegExp(pattern)
-    return { pattern, regex, isError: false }
+    const regex = new RegExp(pattern, flags)
+    return { pattern, regex, isError: false, caseSensitive }
   } catch {
-    return { pattern, regex: null, isError: true }
+    return { pattern, regex: null, isError: true, caseSensitive }
   }
 }
 
@@ -228,6 +237,7 @@ export type {
   ViewTimestampFormat,
   LogEntry,
   LaneDefinition,
+  CreateLaneDefinitionOptions,
   JsonParseSuccess,
   JsonParseFailure,
   ParsedLine,
