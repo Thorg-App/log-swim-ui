@@ -93,11 +93,11 @@ const IPC_CHANNELS = {
 // WHY: Defined in core so both preload and renderer can reference the same contract.
 
 interface ElectronApi {
-  // Push channels (main -> renderer): register callbacks
-  onLogLine: (callback: (line: IpcLogLine) => void) => void
-  onStreamEnd: (callback: () => void) => void
-  onStreamError: (callback: (error: string) => void) => void
-  onConfigError: (callback: (error: string) => void) => void
+  // Push channels (main -> renderer): register callbacks, return unsubscribe function
+  onLogLine: (callback: (line: IpcLogLine) => void) => () => void
+  onStreamEnd: (callback: () => void) => () => void
+  onStreamError: (callback: (error: string) => void) => () => void
+  onConfigError: (callback: (error: string) => void) => () => void
 
   // Request channels (renderer -> main): invoke and await response
   getConfig: () => Promise<AppConfig>
@@ -168,6 +168,35 @@ const DEFAULT_APP_CONFIG: AppConfig = {
   }
 }
 
+// --- Known Log Levels ---
+// Single source of truth for recognized log level names.
+// Referenced by: log-row-utils (CSS class mapping), applyConfigToCSS (CSS variable mapping),
+// and components.css (static CSS rules -- must be kept in sync manually).
+
+const KNOWN_LOG_LEVELS = [
+  'trace',
+  'debug',
+  'info',
+  'notice',
+  'warn',
+  'warning',
+  'error',
+  'fatal',
+  'critical'
+] as const
+
+type KnownLogLevel = (typeof KNOWN_LOG_LEVELS)[number]
+
+// --- View Mode ---
+
+const VIEW_MODES = ['live', 'scroll'] as const
+type ViewMode = (typeof VIEW_MODES)[number]
+
+// --- App Error Types ---
+
+const APP_ERROR_TYPES = ['no-stdin', 'stream-error', 'config-error'] as const
+type AppErrorType = (typeof APP_ERROR_TYPES)[number]
+
 // --- Exports ---
 
 export type {
@@ -187,13 +216,19 @@ export type {
   AppConfigColors,
   AppConfigUI,
   AppConfigPerformance,
-  AppConfig
+  AppConfig,
+  ViewMode,
+  AppErrorType,
+  KnownLogLevel
 }
 
 export {
   TIMESTAMP_FORMATS,
   VIEW_TIMESTAMP_FORMATS,
+  VIEW_MODES,
+  APP_ERROR_TYPES,
   IPC_CHANNELS,
   DEFAULT_APP_CONFIG,
+  KNOWN_LOG_LEVELS,
   createLaneDefinition
 }

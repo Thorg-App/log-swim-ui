@@ -169,9 +169,13 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | `AppConfig` | Full app configuration | `src/core/types.ts` | `colors, ui, performance` (mirrors config.json) |
 | `IpcLogLine` | Parsed line sent via IPC (main→renderer) | `src/core/types.ts` | `rawJson, fields, timestamp, level` |
 | `IPC_CHANNELS` | IPC channel name constants | `src/core/types.ts` | `LOG_LINE, STREAM_END, STREAM_ERROR, CONFIG_ERROR, GET_CONFIG, SAVE_CONFIG, GET_CLI_ARGS` |
-| `ElectronApi` | Preload bridge contract (exposed on `window.api`) | `src/core/types.ts` | `onLogLine, onStreamEnd, onStreamError, onConfigError, getConfig, saveConfig, getCliArgs` |
+| `ElectronApi` | Preload bridge contract (exposed on `window.api`) | `src/core/types.ts` | `onLogLine, onStreamEnd, onStreamError, onConfigError` (push: return `() => void` unsubscribe), `getConfig, saveConfig, getCliArgs` (request/response) |
 | `CliArgsResult` | Parsed CLI args shape | `src/core/types.ts` | `keyLevel, keyTimestamp, lanePatterns` |
 | `StdinReaderHandle` | Stoppable stdin reader handle | `src/core/stdin-reader.ts` | `stop()` |
+| `KNOWN_LOG_LEVELS` | Canonical list of recognized log level names | `src/core/types.ts` | 9 levels: trace, debug, info, notice, warn, warning, error, fatal, critical |
+| `KnownLogLevel` | Union type derived from `KNOWN_LOG_LEVELS` | `src/core/types.ts` | `'trace' \| 'debug' \| ... \| 'critical'` |
+| `ViewMode` | Live vs Scroll mode union | `src/core/types.ts` | `'live' \| 'scroll'` |
+| `AppErrorType` | App error state union | `src/core/types.ts` | `'no-stdin' \| 'stream-error' \| 'config-error'` |
 
 ### Core Pipeline Classes (Phase 03)
 
@@ -192,6 +196,31 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | `ConfigManager` | static | `src/main/config-manager.ts` | Load, validate, deep merge, and save `config.json`. Falls back to defaults on invalid config. |
 | `ConfigValidator` | static | `src/main/config-manager.ts` | Validate raw config JSON structure and values. Returns error list. |
 | `IpcBridge` | stateful | `src/main/ipc-bridge.ts` | Stdin → JsonParser → TimestampDetector → IPC send pipeline. Halts on first-line errors. |
+
+### Renderer Hooks & Utilities (Phase 05)
+
+| Module | Kind | Location | Purpose |
+|--------|------|----------|---------|
+| `useAppInit` | hook | `src/renderer/src/useAppInit.ts` | Init orchestration: load config, CLI args, create MasterList, apply CSS tokens. |
+| `useLogIngestion` | hook | `src/renderer/src/useLogIngestion.ts` | IPC listener wiring, log state (version, stream state, unparseable tracking, view mode). |
+| `timestamp-formatter` | pure fn | `src/renderer/src/timestamp-formatter.ts` | Format timestamps in 3 modes: iso, local, relative. |
+| `ipc-converters` | pure fn | `src/renderer/src/ipc-converters.ts` | Convert `IpcLogLine` to `LogEntry` (classify + assign lane index). |
+| `log-row-utils` | pure fns | `src/renderer/src/log-row-utils.ts` | CSS class, message preview, grid column helpers for LogRow. |
+| `scroll-utils` | pure fn | `src/renderer/src/scroll-utils.ts` | `isScrollingUp(lastTop, currentTop, threshold)` detection. |
+| `applyConfigToCSS` | pure fn | `src/renderer/src/applyConfigToCSS.ts` | Map `AppConfig` to CSS custom properties via `setProperty()`. |
+
+### Renderer Components (Phase 05)
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `App` | `src/renderer/src/App.tsx` | Top-level state machine: loading → error \| ready. Wires hooks to components. |
+| `ErrorScreen` | `src/renderer/src/ErrorScreen.tsx` | Full-screen error display with config revert button. |
+| `SwimLaneGrid` | `src/renderer/src/components/SwimLaneGrid.tsx` | Virtualized CSS grid with `@tanstack/react-virtual`, auto-scroll in Live mode. |
+| `LogRow` | `src/renderer/src/components/LogRow.tsx` | Single log row: collapsed (one-line preview) / expanded (pretty-printed JSON). |
+| `LaneHeader` | `src/renderer/src/components/LaneHeader.tsx` | Lane column header showing regex pattern. |
+| `ModeToggle` | `src/renderer/src/components/ModeToggle.tsx` | Pill-shaped Live/Scroll toggle. |
+| `StreamEndIndicator` | `src/renderer/src/components/StreamEndIndicator.tsx` | Subtle badge when stdin closes. |
+| `UnparseablePanel` | `src/renderer/src/components/UnparseablePanel.tsx` | Bottom panel for entries with failed timestamp parse. |
 
 ## Components / Architecture
 
@@ -385,6 +414,16 @@ $HOME/.config/log-swim-ui/config.json
 | Preload imports from `src/core/` | CLAUDE.md import table originally disallowed this. | Only imports compile-time constants (`IPC_CHANNELS`) and types (`ElectronApi`). DRY: avoids duplicating channel name strings across process boundaries. Import table updated. |
 | `DEFAULT_APP_CONFIG` color values still differ from spec | Phase 03 callout noted this; Phase 04 did not reconcile. | Config manager uses `DEFAULT_APP_CONFIG` from types.ts. Phase 07 (Settings Panel) is the natural place to reconcile, as that phase handles all config UI. |
 | macOS `activate` handler removed | Standard Electron boilerplate includes it. | This is a stdin-piped CLI tool. After `window-all-closed` quits the app, `activate` never fires. Creating a window without IPC bridge would produce a broken shell. |
+
+### Phase 05: UI -- Swimlane Layout, Rows & Modes
+
+| WHAT | WHY-ItsCalledOut | WHY-ItWasDone |
+|------|-----------------|---------------|
+| `ElectronApi` push methods return `() => void` (unsubscribe) | Cross-process boundary interface change in `types.ts` and preload | React effect cleanup requires unsubscribe. Without it, dev strict mode (and any re-mount) would double listeners. |
+| `KNOWN_LOG_LEVELS` moved to `src/core/types.ts` | Shared constant now in core instead of renderer-only | DRY fix: eliminated duplicate level lists in `log-row-utils.ts` and `applyConfigToCSS.ts`. |
+| `applyConfigToCSS` now accepts `AppConfig` directly | Removed 3 duplicate type interfaces that were Phase 02 stubs | DRY fix: `ConfigColors`/`ConfigUI`/`PartialConfig` were structural duplicates of `AppConfig` sub-types. |
+| `@tanstack/react-virtual` added as dependency | New production dependency | Required for virtualizing potentially 20K+ log rows in SwimLaneGrid. |
+| `DesignReferencePage` preserved but not rendered by `App.tsx` | Dev-only reference page kept for design system reference | `App.tsx` now renders the real app shell; the reference page remains available for manual import during design work. |
 
 ## Open Questions
 - None — all requirements confirmed.

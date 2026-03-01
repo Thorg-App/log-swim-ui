@@ -52,6 +52,12 @@ body {
   position: relative;
 }
 
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* =====================================================================
  * Log Row
  * ===================================================================== */
@@ -164,6 +170,7 @@ body {
   display: grid;
   height: 100%;
   overflow: hidden;
+  grid-template-rows: auto 1fr; /* headers auto-size, scroll container fills remaining space */
   /* grid-template-columns set dynamically based on lane count */
 }
 
@@ -454,6 +461,68 @@ body {
 .is-error {
   border-color: var(--color-error);
   color: var(--color-error);
+}
+
+/* =====================================================================
+ * Error Screen (full-screen centered error display)
+ * ===================================================================== */
+.error-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.error-screen__icon {
+  font-size: var(--text-2xl);
+  color: var(--color-error);
+  margin-bottom: var(--space-4);
+}
+
+.error-screen__title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.error-screen__message {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  max-width: 600px;
+  margin-bottom: var(--space-6);
+  word-break: break-word;
+}
+
+.error-screen__action-btn {
+  padding: var(--space-2) var(--space-6);
+  background-color: var(--color-primary);
+  color: var(--color-grey-50);
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.error-screen__action-btn:hover {
+  background-color: var(--color-primary-hover);
+}
+
+/* =====================================================================
+ * Swimlane Scroll Container
+ * ===================================================================== */
+.swimlane-scroll-container {
+  min-height: 0; /* allow grid 1fr row to constrain this child for scrolling */
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  grid-column: 1 / -1; /* span all lane columns */
 }
 
 /* =====================================================================
