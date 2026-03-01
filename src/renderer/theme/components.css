@@ -505,6 +505,199 @@ body {
   color: var(--color-text-secondary);
 }
 
+.settings-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+}
+
+.settings-panel__title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.settings-panel__close-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xl);
+  cursor: pointer;
+  padding: var(--space-1);
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.settings-panel__close-btn:hover {
+  color: var(--color-text-primary);
+}
+
+/* Shared input style for settings panel (reuses shared mono text input pattern) */
+.settings-panel__input {
+  padding: var(--space-1) var(--space-3);
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+  width: 100%;
+}
+
+.settings-panel__input:focus {
+  border-color: var(--color-border-focus);
+}
+
+.settings-panel__input::placeholder {
+  color: var(--color-text-disabled);
+}
+
+.settings-panel__input.is-error {
+  border-color: var(--color-error);
+}
+
+/* Number input: constrained width */
+.settings-panel__input--number {
+  width: 100px;
+}
+
+/* Color field: row with swatch + hex input */
+.settings-panel__color-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-panel__color-swatch {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.settings-panel__color-input {
+  width: 100px;
+}
+
+/* Segmented control for timestamp format */
+.settings-panel__segmented {
+  display: inline-flex;
+  gap: 0;
+}
+
+.settings-panel__segmented-option {
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: var(--border-width) solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast);
+}
+
+.settings-panel__segmented-option:first-child {
+  border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
+}
+
+.settings-panel__segmented-option:last-child {
+  border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+}
+
+.settings-panel__segmented-option:not(:first-child) {
+  border-left: none;
+}
+
+.settings-panel__segmented-option--active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-grey-50);
+}
+
+/* Actions bar (Save / Reset buttons) */
+.settings-panel__actions {
+  display: flex;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--color-border-subtle);
+}
+
+.settings-panel__btn {
+  padding: var(--space-2) var(--space-6);
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.settings-panel__btn--primary {
+  background-color: var(--color-primary);
+  color: var(--color-grey-50);
+}
+
+.settings-panel__btn--primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.settings-panel__btn--primary:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.settings-panel__btn--secondary {
+  background-color: var(--color-surface);
+  color: var(--color-text-secondary);
+  border: var(--border-width) solid var(--color-border);
+}
+
+.settings-panel__btn--secondary:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/* Hint text (e.g., "applies on restart") */
+.settings-panel__hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-disabled);
+  font-style: italic;
+}
+
+/* Validation error message */
+.settings-panel__error {
+  font-size: var(--text-xs);
+  color: var(--color-error);
+}
+
+/* =====================================================================
+ * Settings Trigger (Gear Icon Button)
+ * ===================================================================== */
+.settings-trigger {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  line-height: 1;
+  border-radius: var(--border-radius-md);
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast);
+  margin-left: auto;
+}
+
+.settings-trigger:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-hover);
+}
+
 /* =====================================================================
  * Ad-hoc Lane Input
  * ===================================================================== */

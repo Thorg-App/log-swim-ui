@@ -7,6 +7,7 @@ import { MasterList } from '@core/master-list'
 import { LaneClassifier } from '@core/lane-classifier'
 import type { Filter } from '@core/filter'
 import { FilterEngine } from '@core/filter'
+import { applyConfigToCSS } from './applyConfigToCSS'
 import { useAppInit } from './useAppInit'
 import { useLogIngestion } from './useLogIngestion'
 import { ErrorScreen } from './ErrorScreen'
@@ -16,6 +17,7 @@ import { StreamEndIndicator } from './components/StreamEndIndicator'
 import { UnparseablePanel } from './components/UnparseablePanel'
 import { FilterBar } from './components/FilterBar'
 import { LaneAddInput } from './components/LaneAddInput'
+import { SettingsPanel } from './components/SettingsPanel'
 
 function App() {
   const init = useAppInit()
@@ -51,7 +53,13 @@ interface AppShellProps {
   readonly masterList: MasterList
 }
 
-function AppShell({ config, initialLanes, masterList }: AppShellProps) {
+function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProps) {
+  // --- Config state (promoted from prop for runtime settings changes) ---
+  const [config, setConfig] = useState<AppConfig>(initConfig)
+
+  // --- Settings panel state ---
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   // --- Mutable lane state (lifted from useAppInit for runtime reorder/add) ---
   const [lanes, setLanes] = useState<readonly LaneDefinition[]>(initialLanes)
   const lanesRef = useRef<readonly LaneDefinition[]>(lanes)
@@ -133,40 +141,98 @@ function AppShell({ config, initialLanes, masterList }: AppShellProps) {
     []
   )
 
+  // --- Settings handlers ---
+
+  const handleSettingsSave = useCallback(
+    (newConfig: AppConfig) => {
+      void window.api.saveConfig(newConfig)
+      setConfig(newConfig)
+      applyConfigToCSS(newConfig)
+
+      // Handle maxLogEntries decrease -> immediate eviction
+      if (newConfig.performance.maxLogEntries < masterList.length) {
+        masterList.setMaxEntries(newConfig.performance.maxLogEntries)
+        bumpVersion()
+      }
+
+      setSettingsOpen(false)
+    },
+    [masterList, bumpVersion]
+  )
+
+  const handleSettingsReset = useCallback(() => {
+    void window.api.resetConfig().then((defaults) => {
+      setConfig(defaults)
+      applyConfigToCSS(defaults)
+
+      // Handle maxLogEntries decrease after reset
+      if (defaults.performance.maxLogEntries < masterList.length) {
+        masterList.setMaxEntries(defaults.performance.maxLogEntries)
+        bumpVersion()
+      }
+
+      setSettingsOpen(false)
+    })
+  }, [masterList, bumpVersion])
+
   if (error !== null) {
     return <ErrorScreen errorType={error.type} message={error.message} />
   }
 
   return (
-    <div className="app-layout">
-      <div className="app-toolbar">
-        <ModeToggle mode={mode} onModeChange={setMode} />
-        <LaneAddInput onAddLane={handleAddLane} />
-        <StreamEndIndicator visible={streamEnded} />
-      </div>
-      <FilterBar
-        filters={filters}
-        onAddFilter={handleAddFilter}
-        onRemoveFilter={handleRemoveFilter}
-        onToggleFilter={handleToggleFilter}
-      />
-      <div className="app-main">
-        <SwimLaneGrid
-          masterList={masterList}
-          lanes={lanes}
+    <>
+      <div className="app-layout">
+        <div className="app-toolbar">
+          <ModeToggle mode={mode} onModeChange={setMode} />
+          <LaneAddInput onAddLane={handleAddLane} />
+          <StreamEndIndicator visible={streamEnded} />
+          <button
+            className="settings-trigger"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            type="button"
+          >
+            ⚙
+          </button>
+        </div>
+        <FilterBar
           filters={filters}
-          version={version}
-          timestampFormat={config.ui.viewTimestampFormat}
-          rowHeight={config.ui.rowHeight}
-          mode={mode}
-          onScrollUp={() => setMode('scroll')}
-          onReorderLanes={handleReorderLanes}
+          onAddFilter={handleAddFilter}
+          onRemoveFilter={handleRemoveFilter}
+          onToggleFilter={handleToggleFilter}
         />
+        <div className="app-main">
+          <SwimLaneGrid
+            masterList={masterList}
+            lanes={lanes}
+            filters={filters}
+            version={version}
+            timestampFormat={config.ui.viewTimestampFormat}
+            rowHeight={config.ui.rowHeight}
+            mode={mode}
+            onScrollUp={() => setMode('scroll')}
+            onReorderLanes={handleReorderLanes}
+          />
+        </div>
+        {unparseableEntries.length > 0 && (
+          <UnparseablePanel entries={unparseableEntries} />
+        )}
       </div>
-      {unparseableEntries.length > 0 && (
-        <UnparseablePanel entries={unparseableEntries} />
+      {settingsOpen && (
+        <div
+          className="settings-backdrop"
+          onClick={() => setSettingsOpen(false)}
+          data-testid="settings-backdrop"
+        />
       )}
-    </div>
+      <SettingsPanel
+        isOpen={settingsOpen}
+        config={config}
+        onSave={handleSettingsSave}
+        onReset={handleSettingsReset}
+        onClose={() => setSettingsOpen(false)}
+      />
+    </>
   )
 }
 

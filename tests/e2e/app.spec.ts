@@ -197,4 +197,51 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
       await expect(page.locator('.stream-ended')).toContainText('Stream ended')
     })
   })
+
+  test.describe('WHEN the settings gear icon is clicked', () => {
+    test('THEN the settings panel and backdrop appear', async () => {
+      // Initially no settings panel or backdrop visible
+      await expect(page.locator('[data-testid="settings-panel"]')).toHaveCount(0)
+      await expect(page.locator('[data-testid="settings-backdrop"]')).toHaveCount(0)
+
+      // Click the gear icon
+      await page.locator('.settings-trigger').click()
+
+      // Settings panel and backdrop should be visible
+      await expect(page.locator('[data-testid="settings-panel"]')).toHaveCount(1)
+      await expect(page.locator('[data-testid="settings-backdrop"]')).toHaveCount(1)
+    })
+
+    test('THEN changing a color value updates the CSS variable (live preview)', async () => {
+      // Open settings
+      await page.locator('.settings-trigger').click()
+      await expect(page.locator('[data-testid="settings-panel"]')).toHaveCount(1)
+
+      // Find the background color input and change its value
+      const bgInput = page.locator('input[data-field="colors.background"]')
+      await bgInput.fill('#FF0000')
+
+      // Wait for debounced CSS update (150ms debounce + margin)
+      await page.waitForTimeout(300)
+
+      // Verify the CSS variable was updated on :root
+      const bgColor = await page.evaluate(() =>
+        document.documentElement.style.getPropertyValue('--color-bg')
+      )
+      expect(bgColor).toBe('#FF0000')
+    })
+
+    test('THEN clicking the backdrop closes the settings panel', async () => {
+      // Open settings
+      await page.locator('.settings-trigger').click()
+      await expect(page.locator('[data-testid="settings-panel"]')).toHaveCount(1)
+
+      // Click the backdrop
+      await page.locator('[data-testid="settings-backdrop"]').click()
+
+      // Settings panel and backdrop should be hidden
+      await expect(page.locator('[data-testid="settings-panel"]')).toHaveCount(0)
+      await expect(page.locator('[data-testid="settings-backdrop"]')).toHaveCount(0)
+    })
+  })
 })

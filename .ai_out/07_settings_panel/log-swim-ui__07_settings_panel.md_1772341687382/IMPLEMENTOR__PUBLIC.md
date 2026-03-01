@@ -1,38 +1,68 @@
-# IMPLEMENTOR Public Context -- Phase 7A: Backend/IPC Layer
+# IMPLEMENTOR Public Context -- Phase 07: Settings Panel
 
-## Status: COMPLETE
+## Status: COMPLETE (Phase 7A + 7B)
 
-All 8 steps implemented and verified. 238 tests pass. Typecheck clean.
+All steps implemented and verified. 238 unit tests pass. 14 E2E tests pass. Typecheck clean.
 
-## Files Changed
+## Phase 7B Files Changed
 
 ### New Files
 | File | Purpose |
 |------|---------|
-| `src/core/config-validation.ts` | Pure validation functions: `isValidHexColor`, `isInRange`, `VIEW_TIMESTAMP_FORMAT_OPTIONS` |
-| `tests/unit/core/config-validation.test.ts` | 23 unit tests for validation functions |
+| `src/renderer/src/components/SettingsPanel.tsx` | Slide-out settings panel with local draft state, live CSS preview, validation, Save/Reset/Close |
 
 ### Modified Files
 | File | Changes |
 |------|---------|
-| `src/core/types.ts` | Added `RESET_CONFIG` to IPC_CHANNELS, `resetConfig` to ElectronApi, `CONFIG_CONSTRAINTS` constant |
-| `src/core/master-list.ts` | Removed `readonly` from `maxEntries`, added `setMaxEntries(n)` method |
-| `src/main/config-manager.ts` | Added `async reset(): Promise<AppConfig>` method |
-| `src/main/index.ts` | Registered `RESET_CONFIG` IPC handler |
-| `src/preload/index.ts` | Added `resetConfig` to preload bridge |
-| `src/renderer/src/applyConfigToCSS.ts` | Added `fontFamily` -> `--font-mono` CSS property mapping |
-| `src/renderer/src/useLogIngestion.ts` | Applied `configRef` pattern to prevent IPC teardown on config changes |
-| `tests/unit/core/master-list.test.ts` | Added 4 tests for `setMaxEntries` |
-| `tests/unit/main/config-manager.test.ts` | Added 3 tests for `reset()` |
+| `src/renderer/src/App.tsx` | Promoted config to state, added settingsOpen state, gear icon button, SettingsPanel rendering, Save/Reset handlers with IPC and eviction |
+| `src/renderer/theme/components.css` | Added 17 CSS classes for settings panel fields, buttons, segmented control, color swatches, gear trigger |
+| `tests/e2e/app.spec.ts` | Added 3 E2E tests: open settings, live color preview, close via backdrop |
 
-## Key Decisions
-1. **CONFIG_CONSTRAINTS is UI-only** -- ConfigValidator was NOT modified per reviewer feedback (avoids breaking existing user configs)
-2. **config-validation.ts as separate file** -- SRP: validation helpers distinct from types
-3. **configRef pattern in useLogIngestion** -- Prevents IPC listener teardown/re-setup when config state changes during settings panel edits
+## Key Design Decisions
 
-## What Phase 7B Needs
-- All IPC infrastructure is wired and ready
-- `CONFIG_CONSTRAINTS`, `isValidHexColor`, `isInRange` available for SettingsPanel inline validation
-- `MasterList.setMaxEntries(n)` ready for immediate eviction on maxLogEntries decrease
-- `applyConfigToCSS` handles all config fields including fontFamily
-- `useLogIngestion` is safe for config state changes (no teardown on config update)
+1. **Draft state LOCAL to SettingsPanel** -- Does NOT propagate every keystroke to AppShell. Only `applyConfigToCSS` (debounced 150ms) fires during preview. Parent state updates only on Save/Reset. This prevents unnecessary re-renders and avoids the `useLogIngestion` IPC teardown issue identified in the plan review.
+
+2. **Props split: onSave + onReset** -- Cleaner than a single `onConfigChange` callback. `onSave` handles disk write + state update + eviction + close. `onReset` calls IPC, receives defaults, updates state + CSS + eviction + close.
+
+3. **Conditional rendering (return null when closed)** -- Instead of CSS class toggle with `.settings-panel--closed`. No close animation per 80/20. Simpler E2E testing (count=0 when closed).
+
+4. **Color swatch inline style** -- Only exception to "no inline styles" rule. backgroundColor is dynamic from user input. All other styles use CSS classes.
+
+5. **Gear icon positioning** -- `margin-left: auto` on `.settings-trigger` pushes it to the right side of the flex toolbar. `aria-label="Settings"` for accessibility.
+
+6. **Validation** -- `validateConfig()` runs on every draft change and produces a `ValidationErrors` map keyed by field path (e.g., `colors.levels.trace`, `ui.rowHeight`). Save button disabled when errors exist. Uses `isValidHexColor` and `isInRange` from Phase 7A's `config-validation.ts`.
+
+7. **flushIntervalMs hint** -- Shows "Takes effect on restart" italic hint text below the input.
+
+8. **maxLogEntries eviction** -- Handled in both `handleSettingsSave` and `handleSettingsReset`. Checks `newConfig.performance.maxLogEntries < masterList.length` and calls `masterList.setMaxEntries()` + `bumpVersion()` if needed.
+
+## Component Architecture
+
+```
+App
+  └─ AppShell (config as state)
+       ├─ .app-layout
+       │    ├─ .app-toolbar
+       │    │    ├─ ModeToggle
+       │    │    ├─ LaneAddInput
+       │    │    ├─ StreamEndIndicator
+       │    │    └─ <button .settings-trigger> ⚙
+       │    ├─ FilterBar
+       │    ├─ SwimLaneGrid (uses config.ui.viewTimestampFormat, config.ui.rowHeight)
+       │    └─ UnparseablePanel
+       ├─ .settings-backdrop (conditional, only when settingsOpen)
+       └─ SettingsPanel (local draftConfig state, debounced applyConfigToCSS)
+```
+
+## Test Summary
+
+| Suite | Count | Status |
+|-------|-------|--------|
+| Unit tests (vitest) | 238 | PASS |
+| E2E tests (playwright) | 14 | PASS |
+| Typecheck | - | CLEAN |
+
+### New E2E Tests
+1. Settings panel and backdrop appear when gear icon clicked
+2. Changing background color input updates `--color-bg` CSS variable (live preview)
+3. Clicking backdrop closes settings panel
