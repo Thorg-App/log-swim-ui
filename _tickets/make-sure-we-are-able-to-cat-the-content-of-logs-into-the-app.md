@@ -1,11 +1,11 @@
 ---
 id: iw1eeu0jh52ee6n1azb605el3
 title: "Make sure we are able to cat the content of logs into the app"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-01T13:02:21Z
-status_updated_iso: 2026-03-01T13:02:21Z
+status_updated_iso: 2026-03-01T13:55:57Z
 type: task
 priority: 0
 assignee: nickolaykondratyev
