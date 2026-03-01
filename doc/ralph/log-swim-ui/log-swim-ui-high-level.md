@@ -167,7 +167,11 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | `ParseResult<T>` | Generic ok/error result | `src/core/types.ts` | `{ ok: true, value: T } \| { ok: false, error: string }` |
 | `TimestampFormat` | Detected format union | `src/core/types.ts` | `'iso8601' \| 'epochMillis'` |
 | `AppConfig` | Full app configuration | `src/core/types.ts` | `colors, ui, performance` (mirrors config.json) |
-| `StdinMessage` (IPC) | Main→Renderer log data | `src/core/types.ts` | `type: 'line' \| 'end' \| 'error', data` |
+| `IpcLogLine` | Parsed line sent via IPC (main→renderer) | `src/core/types.ts` | `rawJson, fields, timestamp, level` |
+| `IPC_CHANNELS` | IPC channel name constants | `src/core/types.ts` | `LOG_LINE, STREAM_END, STREAM_ERROR, CONFIG_ERROR, GET_CONFIG, SAVE_CONFIG, GET_CLI_ARGS` |
+| `ElectronApi` | Preload bridge contract (exposed on `window.api`) | `src/core/types.ts` | `onLogLine, onStreamEnd, onStreamError, onConfigError, getConfig, saveConfig, getCliArgs` |
+| `CliArgsResult` | Parsed CLI args shape | `src/core/types.ts` | `keyLevel, keyTimestamp, lanePatterns` |
+| `StdinReaderHandle` | Stoppable stdin reader handle | `src/core/stdin-reader.ts` | `stop()` |
 
 ### Core Pipeline Classes (Phase 03)
 
@@ -178,7 +182,16 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | `LaneClassifier` | static | `src/core/lane-classifier.ts` | First-match-wins classification + batch re-classification. |
 | `MasterList` | stateful | `src/core/master-list.ts` | Sorted collection with binary-search insert + eviction. |
 | `LogBuffer` | stateful | `src/core/log-buffer.ts` | Timer-based flush with callback. Final flush on close. |
-| `StdinReader` | static | `src/core/stdin-reader.ts` | Line-by-line Readable stream reading (Node.js only). |
+| `StdinReader` | static | `src/core/stdin-reader.ts` | Line-by-line Readable stream reading. Returns `StdinReaderHandle` with `stop()`. |
+
+### Electron Shell & CLI Classes (Phase 04)
+
+| Class | Kind | Location | Purpose |
+|-------|------|----------|---------|
+| `CliParser` | static | `src/main/cli-parser.ts` | Parse `--key-level`, `--key-timestamp`, `--lanes` from argv. Throws `CliValidationError`. |
+| `ConfigManager` | static | `src/main/config-manager.ts` | Load, validate, deep merge, and save `config.json`. Falls back to defaults on invalid config. |
+| `ConfigValidator` | static | `src/main/config-manager.ts` | Validate raw config JSON structure and values. Returns error list. |
+| `IpcBridge` | stateful | `src/main/ipc-bridge.ts` | Stdin → JsonParser → TimestampDetector → IPC send pipeline. Halts on first-line errors. |
 
 ## Components / Architecture
 
@@ -362,7 +375,16 @@ $HOME/.config/log-swim-ui/config.json
 |------|-----------------|---------------|
 | `StdinReader` listens for errors on `rl` (readline Interface) instead of raw `input` stream | The task spec implied `input.on('error', ...)`. This is a deviation from the plan. | Node.js `readline.createInterface()` re-emits input stream errors on the Interface instance. Listening on the raw input would miss these propagated errors. |
 | `stdin-reader.ts` excluded from `tsconfig.web.json` | It imports `node:stream` and `node:readline`, which are unavailable in browser context. | The file is used only in `src/main/` (Electron main process). Excluding it from the web tsconfig prevents compilation errors in the renderer build. |
-| `DEFAULT_APP_CONFIG` color values differ from high-level spec defaults | The spec lists specific hex values; implementation uses a slightly different palette. | Phase 04 (config system) will reconcile defaults with the spec. No user-facing impact until then. |
+| `DEFAULT_APP_CONFIG` color values differ from high-level spec defaults | The spec lists specific hex values; implementation uses a slightly different palette. | Phase 07 (Settings Panel) is the natural place to reconcile, as that phase handles all config UI. No user-facing impact until then. |
+
+### Phase 04: Electron Shell & CLI
+
+| WHAT | WHY-ItsCalledOut | WHY-ItWasDone |
+|------|-----------------|---------------|
+| `StdinMessage` types removed | Originally specified in Phase 03 types as the IPC message type. | Superseded by typed IPC channels with `IpcLogLine`. Individual channels (`log-line`, `stream-end`, `stream-error`) are cleaner than multiplexing through a single `StdinMessage` type. |
+| Preload imports from `src/core/` | CLAUDE.md import table originally disallowed this. | Only imports compile-time constants (`IPC_CHANNELS`) and types (`ElectronApi`). DRY: avoids duplicating channel name strings across process boundaries. Import table updated. |
+| `DEFAULT_APP_CONFIG` color values still differ from spec | Phase 03 callout noted this; Phase 04 did not reconcile. | Config manager uses `DEFAULT_APP_CONFIG` from types.ts. Phase 07 (Settings Panel) is the natural place to reconcile, as that phase handles all config UI. |
+| macOS `activate` handler removed | Standard Electron boilerplate includes it. | This is a stdin-piped CLI tool. After `window-all-closed` quits the app, `activate` never fires. Creating a window without IPC bridge would produce a broken shell. |
 
 ## Open Questions
 - None — all requirements confirmed.

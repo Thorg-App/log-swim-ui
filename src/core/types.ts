@@ -68,14 +68,47 @@ interface JsonParseFailure {
 
 type ParsedLine = JsonParseSuccess | JsonParseFailure
 
-// --- StdinMessage (IPC message type for Phase 04) ---
+// --- IPC Log Line (structured data sent from main to renderer) ---
 
-const STDIN_MESSAGE_TYPES = ['line', 'end', 'error'] as const
-type StdinMessageType = (typeof STDIN_MESSAGE_TYPES)[number]
+interface IpcLogLine {
+  readonly rawJson: string
+  readonly fields: Record<string, unknown>
+  readonly timestamp: number // epoch millis; 0 = unparseable
+  readonly level: string // extracted via --key-level; 'unknown' if missing
+}
 
-interface StdinMessage {
-  readonly type: StdinMessageType
-  readonly data?: string // present for 'line' and 'error'
+// --- IPC Channels (centralized channel name constants) ---
+
+const IPC_CHANNELS = {
+  LOG_LINE: 'log-line',
+  STREAM_END: 'stream-end',
+  STREAM_ERROR: 'stream-error',
+  CONFIG_ERROR: 'config-error',
+  GET_CONFIG: 'get-config',
+  SAVE_CONFIG: 'save-config',
+  GET_CLI_ARGS: 'get-cli-args'
+} as const
+
+// --- ElectronApi (preload bridge contract) ---
+// WHY: Defined in core so both preload and renderer can reference the same contract.
+
+interface ElectronApi {
+  // Push channels (main -> renderer): register callbacks
+  onLogLine: (callback: (line: IpcLogLine) => void) => void
+  onStreamEnd: (callback: () => void) => void
+  onStreamError: (callback: (error: string) => void) => void
+  onConfigError: (callback: (error: string) => void) => void
+
+  // Request channels (renderer -> main): invoke and await response
+  getConfig: () => Promise<AppConfig>
+  saveConfig: (config: AppConfig) => Promise<void>
+  getCliArgs: () => Promise<CliArgsResult>
+}
+
+interface CliArgsResult {
+  readonly keyLevel: string
+  readonly keyTimestamp: string
+  readonly lanePatterns: readonly string[]
 }
 
 // --- AppConfig ---
@@ -148,8 +181,9 @@ export type {
   JsonParseSuccess,
   JsonParseFailure,
   ParsedLine,
-  StdinMessageType,
-  StdinMessage,
+  IpcLogLine,
+  ElectronApi,
+  CliArgsResult,
   AppConfigColors,
   AppConfigUI,
   AppConfigPerformance,
@@ -159,7 +193,7 @@ export type {
 export {
   TIMESTAMP_FORMATS,
   VIEW_TIMESTAMP_FORMATS,
-  STDIN_MESSAGE_TYPES,
+  IPC_CHANNELS,
   DEFAULT_APP_CONFIG,
   createLaneDefinition
 }
