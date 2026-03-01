@@ -16,7 +16,7 @@ function App() {
   if (init.status === 'loading') {
     return (
       <div className="app-layout">
-        <div className="app-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="app-main app-loading">
           <span className="text-muted">Loading...</span>
         </div>
       </div>

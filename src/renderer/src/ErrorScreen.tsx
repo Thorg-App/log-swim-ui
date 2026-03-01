@@ -1,4 +1,4 @@
-import type { AppErrorType, AppConfig } from '@core/types'
+import type { AppErrorType } from '@core/types'
 import { DEFAULT_APP_CONFIG } from '@core/types'
 
 interface ErrorScreenProps {
@@ -22,8 +22,13 @@ function ErrorScreen({ errorType, message }: ErrorScreenProps) {
 
   function handleRevertConfig(): void {
     void window.api
-      .saveConfig(DEFAULT_APP_CONFIG as AppConfig)
+      .saveConfig(DEFAULT_APP_CONFIG)
       .then(() => { window.location.reload() })
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : 'Unknown error'
+        // eslint-disable-next-line no-console -- last-resort error reporting on config revert failure
+        console.error(`Failed to revert config: ${msg}`)
+      })
   }
 
   return (

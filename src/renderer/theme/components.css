@@ -52,6 +52,12 @@ body {
   position: relative;
 }
 
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* =====================================================================
  * Log Row
  * ===================================================================== */
@@ -164,6 +170,7 @@ body {
   display: grid;
   height: 100%;
   overflow: hidden;
+  grid-template-rows: auto 1fr; /* headers auto-size, scroll container fills remaining space */
   /* grid-template-columns set dynamically based on lane count */
 }
 
@@ -511,7 +518,7 @@ body {
  * Swimlane Scroll Container
  * ===================================================================== */
 .swimlane-scroll-container {
-  flex: 1;
+  min-height: 0; /* allow grid 1fr row to constrain this child for scrolling */
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;

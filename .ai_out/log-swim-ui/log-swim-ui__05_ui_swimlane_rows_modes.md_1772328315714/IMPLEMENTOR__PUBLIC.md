@@ -64,3 +64,34 @@ Sub-phase 5C -- the three remaining UI components: ModeToggle (pill-shaped Live/
 - `npm test`: 180 tests pass (14 test files), including 8 new scroll-utils tests
 - `npm run typecheck`: Clean (0 errors)
 - No existing tests were modified, skipped, or removed
+
+---
+
+## Implementation Review Fixes (Iteration 1)
+
+### MAJOR-1: Fixed missing `grid-template-rows` on `.swimlane-grid`
+- **File**: `src/renderer/theme/components.css`
+- Added `grid-template-rows: auto 1fr;` so header row auto-sizes and scroll container row fills remaining space.
+- Replaced `flex: 1` (no-op in grid context) with `min-height: 0` on `.swimlane-scroll-container` so the grid `1fr` row properly constrains the child for scrolling.
+
+### MAJOR-2: Removed unnecessary `as AppConfig` assertion
+- **File**: `src/renderer/src/ErrorScreen.tsx`
+- `DEFAULT_APP_CONFIG` is already typed as `AppConfig` in `types.ts`. Removed the redundant `as AppConfig` cast.
+- Also removed the now-unused `AppConfig` type import.
+
+### MINOR-1: Replaced inline style on loading screen with CSS class
+- **File**: `src/renderer/src/App.tsx` + `src/renderer/theme/components.css`
+- Added `.app-loading` class to `components.css` (flex centering).
+- Replaced inline `style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}` with `className="app-main app-loading"`.
+
+### MINOR-2: Added `.catch()` to `handleRevertConfig` promise chain
+- **File**: `src/renderer/src/ErrorScreen.tsx`
+- Added `.catch()` handler that logs the error via `console.error`. This is a last-resort error reporting path (config revert failure on an already-errored screen), so `console.error` is appropriate with an eslint-disable comment.
+
+### MINOR-3: `void unparseableCount` pattern -- No change
+- The existing `// WHY:` comment adequately explains the purpose. The pattern is a standard JS idiom for acknowledging a value.
+- Rejected the `useReducer` suggestion as over-engineering for a single counter trigger.
+
+### Post-Fix Verification
+- `npm test`: 180 tests pass (14 test files)
+- `npm run typecheck`: Clean (0 errors)

@@ -1,48 +1,31 @@
-# IMPLEMENTOR Private Context -- Phase 05 Sub-phase 5C
+# IMPLEMENTOR Private Context -- Phase 05 (Post-Review Fix)
 
-## Completed: Sub-phases 5A + 5B + 5C
+## Completed: Sub-phases 5A + 5B + 5C + Review Fix Iteration 1
 
-All items from all three sub-phases are implemented. Tests pass (180), typecheck clean.
+All items from all three sub-phases are implemented. Review findings have been addressed.
+Tests pass (180), typecheck clean.
 
-## Key Files Created/Modified in 5C
+## Review Fix Iteration 1 -- Changes Made
 
-### New files:
-- `/src/renderer/src/components/ModeToggle.tsx`
-- `/src/renderer/src/components/StreamEndIndicator.tsx`
-- `/src/renderer/src/components/UnparseablePanel.tsx`
-- `/src/renderer/src/scroll-utils.ts`
-- `/tests/unit/renderer/scroll-utils.test.ts` (8 tests)
+### MAJOR-1: Grid layout fix
+- `src/renderer/theme/components.css`: Added `grid-template-rows: auto 1fr;` to `.swimlane-grid`
+- `src/renderer/theme/components.css`: Replaced `flex: 1` with `min-height: 0` on `.swimlane-scroll-container`
 
-### Modified files:
-- `/src/renderer/src/App.tsx` -- Replaced all 3 placeholders with real components, added imports
-- `/src/renderer/src/components/SwimLaneGrid.tsx` -- Extracted scroll-up detection to use `isScrollingUp()` from scroll-utils.ts
+### MAJOR-2: Type assertion removal
+- `src/renderer/src/ErrorScreen.tsx`: Removed `as AppConfig` cast on `DEFAULT_APP_CONFIG`
+- `src/renderer/src/ErrorScreen.tsx`: Removed unused `AppConfig` type import
 
-## Phase 05 Complete Component Tree
+### MINOR-1: Inline style replaced
+- `src/renderer/theme/components.css`: Added `.app-loading` class
+- `src/renderer/src/App.tsx`: Replaced inline style with `app-loading` class
 
-```
-App
- |-- ErrorScreen (shown for fatal errors)
- |-- AppShell
-      |-- ModeToggle (Live/Scroll pill toggle)
-      |-- StreamEndIndicator (visible when stream ends)
-      |-- SwimLaneGrid
-      |    |-- LaneHeader[] (one per lane + unmatched)
-      |    |-- Virtualized scroll container
-      |         |-- LogRow[] (virtual, only visible rendered)
-      |-- UnparseablePanel (shown when unparseable entries > 0)
-```
+### MINOR-2: Error handling added
+- `src/renderer/src/ErrorScreen.tsx`: Added `.catch()` to `handleRevertConfig` promise chain
 
-## Architecture Notes
+### MINOR-3: No change (rejected as stylistic)
+- `void unparseableCount` pattern left as-is with existing `// WHY:` comment
 
-- All three new components are thin presentational wrappers around CSS classes
-- ModeToggle: two `<button>` elements with conditional `.mode-toggle__option--active` class
-- StreamEndIndicator: self-hiding (returns null when `visible` is false)
-- UnparseablePanel: renders header with badge + list of raw JSON rows; index keys are safe (append-only list)
-- scroll-utils.ts: single pure function `isScrollingUp(lastTop, currentTop, threshold)` -- returns `delta > threshold`
-
-## Test Count: 180 total (14 test files)
-- 172 existing tests (unchanged, from 5A + 5B)
-- 8 new scroll-utils tests
+## Test Count: 180 total (14 test files) -- unchanged
 
 ## Phase 05 Sub-phases Summary
 
@@ -51,3 +34,4 @@ App
 | 5A: Core App Shell + State + IPC | COMPLETE | 7 source + 2 test | ~118 tests (from earlier phases) + ~27 new |
 | 5B: Swimlane Grid + Virtualization | COMPLETE | 4 source + 1 test | 27 new log-row-utils tests |
 | 5C: Mode Toggle + Stream End + Unparseable | COMPLETE | 4 source + 1 test | 8 new scroll-utils tests |
+| Review Fix Iteration 1 | COMPLETE | 0 new files | 0 new tests (CSS + type fixes) |
