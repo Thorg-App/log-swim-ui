@@ -1,0 +1,200 @@
+import { test, expect } from '@playwright/test'
+import type { ElectronApplication, Page } from '@playwright/test'
+import {
+  launchApp,
+  injectLogLines,
+  sendStreamEnd,
+  waitForFlush,
+  createIpcLogLine
+} from './helpers/electron-app'
+
+// --- Shared Test Data ---
+
+const DEFAULT_CLI_ARGS = [
+  '--key-level', 'level',
+  '--key-timestamp', 'timestamp',
+  '--lanes', 'error', 'auth'
+]
+
+const SAMPLE_LOG_LINES = [
+  createIpcLogLine('error', 'Connection failed to database', '2024-01-15T10:00:01.000Z', { service: 'db' }),
+  createIpcLogLine('info', 'User login successful', '2024-01-15T10:00:02.000Z', { service: 'auth' }),
+  createIpcLogLine('error', 'Auth token expired', '2024-01-15T10:00:03.000Z', { service: 'auth' }),
+  createIpcLogLine('warn', 'High memory usage', '2024-01-15T10:00:04.000Z', { service: 'monitor' }),
+  createIpcLogLine('info', 'Health check passed', '2024-01-15T10:00:05.000Z', { service: 'monitor' })
+]
+
+// --- Tests ---
+
+test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () => {
+  let electronApp: ElectronApplication
+  let page: Page
+
+  test.beforeEach(async () => {
+    const app = await launchApp(DEFAULT_CLI_ARGS)
+    electronApp = app.electronApp
+    page = app.page
+  })
+
+  test.afterEach(async () => {
+    await electronApp.close()
+  })
+
+  test('THEN it renders 3 lane headers (error, auth, unmatched)', async () => {
+    const headers = page.locator('.lane-header')
+    await expect(headers).toHaveCount(3)
+
+    // Verify lane header pattern text
+    const patterns = page.locator('.lane-header__pattern')
+    await expect(patterns.nth(0)).toHaveText('error')
+    await expect(patterns.nth(1)).toHaveText('auth')
+    await expect(patterns.nth(2)).toHaveText('unmatched')
+  })
+
+  test('THEN the unmatched lane header has the unmatched CSS class', async () => {
+    const unmatchedHeader = page.locator('.lane-header--unmatched')
+    await expect(unmatchedHeader).toHaveCount(1)
+  })
+
+  test.describe('WHEN test log lines are injected', () => {
+    test.beforeEach(async () => {
+      await injectLogLines(electronApp, SAMPLE_LOG_LINES)
+      await waitForFlush(page)
+    })
+
+    test('THEN log rows appear in the grid', async () => {
+      const rows = page.locator('.log-row')
+      // WHY: expect.toBeGreaterThan because virtualization may render a subset.
+      // With 5 entries and typical window size, all should be visible.
+      const count = await rows.count()
+      expect(count).toBeGreaterThan(0)
+      expect(count).toBeLessThanOrEqual(SAMPLE_LOG_LINES.length)
+    })
+
+    test('THEN log rows display message previews', async () => {
+      const messages = page.locator('.log-row__message')
+      const count = await messages.count()
+      expect(count).toBeGreaterThan(0)
+
+      // Verify at least one message is from our test data
+      const allText = await messages.allTextContents()
+      const hasExpectedMessage = allText.some((text) => text.includes('Connection failed'))
+      expect(hasExpectedMessage).toBe(true)
+    })
+
+    test('THEN clicking a log row expands it to show full JSON', async () => {
+      const firstRow = page.locator('.log-row').first()
+      await firstRow.click()
+
+      // After click, expanded content should be visible
+      const expandedContent = page.locator('.log-row__expanded-content')
+      await expect(expandedContent).toHaveCount(1)
+
+      // Expanded content should contain JSON fields
+      const text = await expandedContent.textContent()
+      expect(text).not.toBeNull()
+      expect(text!).toContain('"level"')
+    })
+
+    test('THEN clicking an expanded row collapses it', async () => {
+      const firstRow = page.locator('.log-row').first()
+
+      // Expand
+      await firstRow.click()
+      await expect(page.locator('.log-row__expanded-content')).toHaveCount(1)
+
+      // Collapse by dispatching click on the expanded row
+      // WHY: In virtualized layout with absolute-positioned rows, Playwright's actionability
+      // check detects overlapping log-row-grid elements. We dispatch the click event directly.
+      await page.locator('.log-row--expanded').dispatchEvent('click')
+
+      await expect(page.locator('.log-row__expanded-content')).toHaveCount(0)
+    })
+  })
+
+  test.describe('WHEN a raw filter is applied', () => {
+    test.beforeEach(async () => {
+      await injectLogLines(electronApp, SAMPLE_LOG_LINES)
+      await waitForFlush(page)
+    })
+
+    test('THEN only matching rows remain visible', async () => {
+      // Get initial row count
+      const initialCount = await page.locator('.log-row').count()
+      expect(initialCount).toBeGreaterThan(0)
+
+      // Click "+ Filter" button to open filter form
+      await page.locator('.filter-bar .filter-add-btn', { hasText: '+ Filter' }).click()
+
+      // Type pattern into the regex input (raw mode is default)
+      const patternInput = page.locator('.filter-bar__input[placeholder="regex pattern"]')
+      await patternInput.fill('Connection failed')
+
+      // Click Add button
+      await page.locator('.filter-bar__form .filter-add-btn', { hasText: 'Add' }).click()
+
+      // Wait for filter to take effect (re-render)
+      await page.waitForTimeout(200)
+
+      // After filtering, fewer rows should be visible
+      const filteredCount = await page.locator('.log-row').count()
+      expect(filteredCount).toBeLessThan(initialCount)
+      expect(filteredCount).toBeGreaterThan(0)
+
+      // The visible row should contain "Connection failed"
+      const messages = await page.locator('.log-row__message').allTextContents()
+      expect(messages.every((m) => m.includes('Connection failed'))).toBe(true)
+    })
+  })
+
+  test.describe('WHEN a new lane is added via LaneAddInput', () => {
+    test('THEN a new lane header appears before "unmatched"', async () => {
+      // Initially 3 lanes: error, auth, unmatched
+      await expect(page.locator('.lane-header')).toHaveCount(3)
+
+      // Type a regex pattern in the lane-add input
+      const laneInput = page.locator('.lane-add-input__field')
+      await laneInput.fill('monitor')
+      await laneInput.press('Enter')
+
+      // Now there should be 4 lane headers
+      await expect(page.locator('.lane-header')).toHaveCount(4)
+
+      // Verify order: error, auth, monitor, unmatched
+      const patterns = page.locator('.lane-header__pattern')
+      await expect(patterns.nth(0)).toHaveText('error')
+      await expect(patterns.nth(1)).toHaveText('auth')
+      await expect(patterns.nth(2)).toHaveText('monitor')
+      await expect(patterns.nth(3)).toHaveText('unmatched')
+    })
+  })
+
+  test.describe('WHEN the mode toggle is used', () => {
+    test('THEN default mode is Live', async () => {
+      const activeOption = page.locator('.mode-toggle__option--active')
+      await expect(activeOption).toHaveText('Live')
+    })
+
+    test('THEN clicking Scroll switches to Scroll mode', async () => {
+      const scrollButton = page.locator('.mode-toggle__option', { hasText: 'Scroll' })
+      await scrollButton.click()
+
+      const activeOption = page.locator('.mode-toggle__option--active')
+      await expect(activeOption).toHaveText('Scroll')
+    })
+  })
+
+  test.describe('WHEN stream-end is signaled', () => {
+    test('THEN stream-ended indicator appears', async () => {
+      // Initially no stream-ended indicator
+      await expect(page.locator('.stream-ended')).toHaveCount(0)
+
+      // Send stream end signal
+      await sendStreamEnd(electronApp)
+
+      // Wait for the indicator to appear
+      await expect(page.locator('.stream-ended')).toHaveCount(1)
+      await expect(page.locator('.stream-ended')).toContainText('Stream ended')
+    })
+  })
+})

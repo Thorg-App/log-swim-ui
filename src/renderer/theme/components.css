@@ -137,13 +137,8 @@ body {
 }
 
 .lane-header__drag-handle {
-  cursor: grab;
   color: var(--color-text-disabled);
   flex-shrink: 0;
-}
-
-.lane-header__drag-handle:active {
-  cursor: grabbing;
 }
 
 .lane-header__pattern {
@@ -161,6 +156,27 @@ body {
 .lane-header--unmatched {
   font-style: italic;
   color: var(--color-text-disabled);
+}
+
+/* Drop target indicator during lane drag */
+.lane-header--drag-over {
+  background-color: var(--color-surface-hover);
+  border-left: var(--border-width-thick) solid var(--color-accent);
+}
+
+/* Hidden drag handle for unmatched lane (preserves spacing) */
+.lane-header__drag-handle--hidden {
+  visibility: hidden;
+}
+
+/* Draggable handle cursor states */
+.lane-header__drag-handle[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+}
+
+.lane-header__drag-handle[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 /* =====================================================================
@@ -252,6 +268,83 @@ body {
 .filter-add-btn:hover {
   border-color: var(--color-primary);
   color: var(--color-text-primary);
+}
+
+/* Invalid filter indicator (regex compilation failed) */
+.filter-chip--error {
+  border-color: var(--color-error);
+}
+
+.filter-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: var(--filter-chip-label-max-width);
+}
+
+/* Inline filter creation form */
+.filter-bar__form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Shared mono text input style (used by filter bar, lane add input) */
+.filter-bar__input,
+.lane-add-input__field {
+  padding: var(--space-1) var(--space-3);
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.filter-bar__input:focus,
+.lane-add-input__field:focus {
+  border-color: var(--color-border-focus);
+}
+
+.filter-bar__input::placeholder,
+.lane-add-input__field::placeholder {
+  color: var(--color-text-disabled);
+}
+
+/* Filter type selector group */
+.filter-bar__type-group {
+  display: inline-flex;
+  gap: 0;
+}
+
+.filter-bar__type-toggle {
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: var(--border-width) solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast);
+}
+
+.filter-bar__type-toggle:first-child {
+  border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
+}
+
+.filter-bar__type-toggle:last-child {
+  border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+  border-left: none;
+}
+
+.filter-bar__type-toggle--active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-grey-50);
 }
 
 /* =====================================================================
@@ -421,25 +514,8 @@ body {
   gap: var(--space-2);
 }
 
-.lane-add-input__field {
-  padding: var(--space-1) var(--space-3);
-  background-color: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  color: var(--color-text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-.lane-add-input__field:focus {
-  border-color: var(--color-border-focus);
-}
-
-.lane-add-input__field::placeholder {
-  color: var(--color-text-disabled);
-}
+/* .lane-add-input__field styles are defined in the shared mono text input
+   block above (Filter Bar section) -- DRY: single source of truth for input styling */
 
 /* =====================================================================
  * Generic Component States

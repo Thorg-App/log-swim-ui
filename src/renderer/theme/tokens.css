@@ -206,6 +206,12 @@
   --filter-bar-height:    48px;
   --settings-panel-width: 360px;
   --unparseable-panel-max-height: 200px;
+  --filter-chip-label-max-width: 200px;
+
+  /* ===================================================================
+   * Semantic: Accent (used for drag-over indicators, highlights)
+   * =================================================================== */
+  --color-accent: var(--color-grey-400);
 
   /* ===================================================================
    * Transitions
