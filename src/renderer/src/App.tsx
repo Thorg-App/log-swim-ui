@@ -1,7 +1,12 @@
+import { useState, useRef, useEffect, useCallback } from 'react'
 import '../theme/tokens.css'
 import '../theme/components.css'
 import type { AppConfig, LaneDefinition } from '@core/types'
+import { createLaneDefinition } from '@core/types'
 import { MasterList } from '@core/master-list'
+import { LaneClassifier } from '@core/lane-classifier'
+import type { Filter } from '@core/filter'
+import { FilterEngine } from '@core/filter'
 import { useAppInit } from './useAppInit'
 import { useLogIngestion } from './useLogIngestion'
 import { ErrorScreen } from './ErrorScreen'
@@ -30,7 +35,7 @@ function App() {
   return (
     <AppShell
       config={init.config}
-      lanes={init.lanes}
+      initialLanes={init.lanes}
       masterList={init.masterList}
     />
   )
@@ -40,23 +45,98 @@ function App() {
 
 interface AppShellProps {
   readonly config: AppConfig
-  readonly lanes: LaneDefinition[]
+  readonly initialLanes: readonly LaneDefinition[]
   readonly masterList: MasterList
 }
 
-function AppShell({ config, lanes, masterList }: AppShellProps) {
+function AppShell({ config, initialLanes, masterList }: AppShellProps) {
+  // --- Mutable lane state (lifted from useAppInit for runtime reorder/add) ---
+  const [lanes, setLanes] = useState<readonly LaneDefinition[]>(initialLanes)
+  const lanesRef = useRef<readonly LaneDefinition[]>(lanes)
+  useEffect(() => {
+    lanesRef.current = lanes
+  }, [lanes])
+
+  // --- Filter state ---
+  const [filters, setFilters] = useState<readonly Filter[]>([])
+
   const {
     version,
     streamEnded,
     error,
     unparseableEntries,
     mode,
-    setMode
-  } = useLogIngestion(masterList, lanes, config)
+    setMode,
+    bumpVersion
+  } = useLogIngestion(masterList, lanesRef, config)
+
+  // --- Lane handlers (used by LaneAddInput and drag-and-drop in 6C/6D) ---
+
+  const handleAddLane = useCallback(
+    (pattern: string) => {
+      const newLane = createLaneDefinition(pattern)
+      // Insert before "unmatched" position (i.e. append to lanes array,
+      // since "unmatched" is implicit at lanes.length)
+      const newLanes = [...lanes, newLane]
+      setLanes(newLanes)
+      LaneClassifier.reclassifyAll(masterList.entries, newLanes)
+      bumpVersion()
+    },
+    [lanes, masterList, bumpVersion]
+  )
+
+  const handleReorderLanes = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return
+
+      const newLanes = [...lanes]
+      const [moved] = newLanes.splice(fromIndex, 1)
+      newLanes.splice(toIndex, 0, moved)
+
+      setLanes(newLanes)
+      LaneClassifier.reclassifyAll(masterList.entries, newLanes)
+      bumpVersion()
+    },
+    [lanes, masterList, bumpVersion]
+  )
+
+  // --- Filter handlers (used by FilterBar in 6C) ---
+
+  const handleAddFilter = useCallback(
+    (filter: Filter) => {
+      setFilters((prev) => [...prev, filter])
+    },
+    []
+  )
+
+  const handleRemoveFilter = useCallback(
+    (id: string) => {
+      setFilters((prev) => prev.filter((f) => f.id !== id))
+    },
+    []
+  )
+
+  const handleToggleFilter = useCallback(
+    (id: string) => {
+      setFilters((prev) =>
+        prev.map((f) => (f.id === id ? FilterEngine.toggleFilter(f) : f))
+      )
+    },
+    []
+  )
 
   if (error !== null) {
     return <ErrorScreen errorType={error.type} message={error.message} />
   }
+
+  // WHY: Suppress unused-variable warnings for handlers that will be wired to UI in Phase 6C/6D.
+  // Removing these would lose the implementation; they are tested through integration in later phases.
+  void handleAddLane
+  void handleReorderLanes
+  void handleAddFilter
+  void handleRemoveFilter
+  void handleToggleFilter
+  void filters
 
   return (
     <div className="app-layout">

@@ -1,77 +1,75 @@
-# Phase 6A Implementation: Core Filter Types, Logic, and Unit Tests
+# Phase 6B Implementation: State Management Refactor (Mutable Lanes + Filter State)
 
 ## Status: COMPLETE
 
 ## What Was Implemented
 
-Phase 6A delivers the pure filter logic module with full unit test coverage. No React or Electron dependencies -- pure TypeScript logic in `src/core/`.
+Phase 6B lifts lane state from read-only (passed from `useAppInit`) to mutable `useState` in `AppShell`, adds filter state, and refactors `useLogIngestion` to accept a `lanesRef` instead of `lanes` so that lane changes do not cause IPC listener teardown/re-setup.
 
-### New Files
+### Modified Files
 
-| File | Purpose |
+| File | Changes |
 |------|---------|
-| `src/core/filter.ts` | `FilterEngine` static class + `Filter` discriminated union types |
-| `tests/unit/core/filter.test.ts` | 27 BDD-style unit tests for filter logic |
+| `src/renderer/src/useLogIngestion.ts` | Accept `lanesRef: RefObject<readonly LaneDefinition[]>` instead of `lanes`; read `lanesRef.current` at invocation time in `onLogLine` callback; remove `lanes` from effect dep array; expose `bumpVersion()` in return type |
+| `src/renderer/src/App.tsx` | Lift lanes to `useState` in AppShell; create `lanesRef` synced via `useEffect`; add `filters` state; add handler functions (`handleAddLane`, `handleReorderLanes`, `handleAddFilter`, `handleRemoveFilter`, `handleToggleFilter`); pass `lanesRef` to `useLogIngestion` |
 
-### No Modified Files
+### No New Files
 
-Phase 6A is additive only. No existing files were modified.
+Phase 6B is a refactor of existing files. No new files created.
 
 ## Design Decisions
 
-### 1. Discriminated Union for Filter Types
-Used `FieldFilter | RawFilter` discriminated union (per plan + review approval). Enforces at compile time that `field` is present when `type === 'field'`. Aligns with project principle: "compile-time checks over runtime."
+### 1. `lanesRef` Pattern for IPC Stability
 
-### 2. Private Static ID Counter
-Placed the filter ID counter as `private static nextId = 0` on `FilterEngine` class (per plan review point #5). Added `resetIdCounter()` method for test isolation.
+The `useLogIngestion` hook's `useEffect` sets up IPC listeners and a `LogBuffer`. Previously, `lanes` was in the dependency array, meaning any lane change (reorder, add) would tear down all IPC listeners and the LogBuffer timer, then recreate them. This would cause missed log messages during the brief teardown window.
 
-### 3. Invalid Regex Handling
-- `matchesFilter` returns `false` for filters with `regex === null` (invalid regex never matches).
-- `matchesAllFilters` skips filters with `regex === null` (invalid filters do not block entries).
-- This means an invalid filter is effectively inert -- it exists in the UI but does not affect results.
+**Solution**: Accept a `RefObject<readonly LaneDefinition[]>` instead. The ref object is stable (same identity across renders), so the effect does NOT re-run on lane changes. Inside the `onLogLine` callback, `lanesRef.current` is read at invocation time, ensuring new entries are classified against the latest lane order.
 
-### 4. Field Value Coercion
-Field filter extracts `String(entry.fields[field] ?? '')` -- coerces any field value to string before regex test. Missing fields become empty string. This is tested for numeric values (e.g., `status: 500` matches pattern `"500"`).
+### 2. `convertIpcToLogEntry(ipcLine, lanesRef.current)` at Call Site
 
-### 5. `as const` Pattern for Filter Types
-Used `FILTER_TYPES = ['field', 'raw'] as const` with derived `FilterType` -- follows project convention (no enums).
+Per plan review point #1: The existing `convertIpcToLogEntry` function signature is unchanged (still accepts `lanes: readonly LaneDefinition[]`). The call site in `useLogIngestion` simply passes `lanesRef.current` which is read at invocation time, not at closure capture time. This is the simplest possible change -- one token.
 
-## API Summary
+### 3. Handler Functions as `useCallback` Stubs
 
-```typescript
-// Types
-type Filter = FieldFilter | RawFilter
+All handler functions (`handleAddLane`, `handleReorderLanes`, `handleAddFilter`, `handleRemoveFilter`, `handleToggleFilter`) are fully implemented with correct logic but not yet wired to UI components. They are suppressed with `void` to avoid unused-variable warnings. Phase 6C/6D will wire them to `LaneAddInput`, drag-and-drop, and `FilterBar`.
 
-// Factory methods
-FilterEngine.createFieldFilter(field: string, pattern: string): FieldFilter
-FilterEngine.createRawFilter(pattern: string): RawFilter
+### 4. AppShellProps Change: `lanes` -> `initialLanes`
 
-// Operations
-FilterEngine.toggleFilter(filter: Filter): Filter
-FilterEngine.matchesFilter(entry: LogEntry, filter: Filter): boolean
-FilterEngine.matchesAllFilters(entry: LogEntry, filters: readonly Filter[]): boolean
+Renamed the prop from `lanes` to `initialLanes` with type `readonly LaneDefinition[]` to make it clear this is the seed value. Internal state `lanes` via `useState` is the mutable version.
 
-// Test utility
-FilterEngine.resetIdCounter(): void
-```
+### 5. Filter State with `readonly` Arrays
+
+Both `lanes` and `filters` state use `readonly` array types (`readonly LaneDefinition[]`, `readonly Filter[]`) to prevent accidental mutation. All updates create new arrays.
+
+### 6. `bumpVersion` via `useCallback`
+
+Exposed as a stable callback from `useLogIngestion` so external code (lane reorder, filter change) can trigger re-renders without going through the IPC path. Uses `useCallback` with empty deps for stability.
+
+## Plan Review Points Addressed
+
+| Review Point | How Addressed |
+|---|---|
+| #1: `convertIpcToLogEntry` must use `lanesRef.current` at invocation time | Done -- call site reads `lanesRef.current` at invocation, not from closure |
+| #3: `config` stability assumed | Added WHY comment in dependency array noting Phase 07 may need ref pattern |
+| #5: Filter ID counter as private static | Already done in Phase 6A |
 
 ## Test Results
 
 ```
 Test Files  15 passed (15)
-     Tests  207 passed (207) -- including 27 new filter tests
-  Duration  194ms
+     Tests  207 passed (207) -- all existing tests still pass
+  Duration  218ms
 ```
 
-All existing tests continue to pass. Typecheck passes.
+Typecheck: PASS (zero errors)
 
-## Test Coverage (27 tests)
+## What Phase 6C/6D Will Wire
 
-| Area | Count | Scenarios |
-|------|-------|-----------|
-| createRawFilter | 3 | valid regex, invalid regex, unique IDs |
-| createFieldFilter | 2 | valid regex, invalid regex |
-| toggleFilter | 3 | enable->disable, disable->enable, preserves properties |
-| matchesFilter | 8 | raw match/no-match, field match/no-match, missing field, null regex, complex regex, numeric coercion |
-| matchesAllFilters | 8 | vacuous truth, AND both match, AND one fails, disabled skipped, null regex skipped, all disabled, mixed types match, mixed types fail |
-| resetIdCounter | 1 | resets to 0 |
+The following handlers exist in `AppShell` and will be connected to UI components:
+
+- `handleAddLane(pattern: string)` -> `LaneAddInput` component (6C)
+- `handleReorderLanes(fromIndex, toIndex)` -> `LaneHeader` drag-and-drop (6D)
+- `handleAddFilter(filter: Filter)` -> `FilterBar` component (6C)
+- `handleRemoveFilter(id: string)` -> `FilterChip` component (6C)
+- `handleToggleFilter(id: string)` -> `FilterChip` component (6C)
+- `filters` state -> `SwimLaneGrid` for render-time filtering (6C)

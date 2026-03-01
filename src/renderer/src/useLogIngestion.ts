@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { RefObject } from 'react'
 import type { AppConfig, LaneDefinition, AppErrorType, ViewMode } from '@core/types'
 import { MasterList } from '@core/master-list'
 import { LogBuffer } from '@core/log-buffer'
@@ -18,17 +19,22 @@ interface LogIngestionResult {
   readonly unparseableEntries: readonly string[]
   readonly mode: ViewMode
   readonly setMode: (mode: ViewMode) => void
+  readonly bumpVersion: () => void
 }
 
 /**
  * Hook that wires IPC callbacks to the data pipeline:
  * IpcLogLine -> convert -> LogBuffer -> MasterList -> version increment -> re-render.
  *
+ * Accepts a lanesRef so that lane changes (reorder, add) do NOT cause the IPC
+ * effect to teardown/re-setup. The onLogLine callback reads lanesRef.current
+ * at invocation time, ensuring new entries classify against the latest lane order.
+ *
  * Handles cleanup of IPC listeners and LogBuffer timer on unmount.
  */
 function useLogIngestion(
   masterList: MasterList,
-  lanes: readonly LaneDefinition[],
+  lanesRef: RefObject<readonly LaneDefinition[]>,
   config: AppConfig
 ): LogIngestionResult {
   const [version, setVersion] = useState(0)
@@ -37,6 +43,10 @@ function useLogIngestion(
   const [mode, setMode] = useState<ViewMode>('live')
   const unparseableRef = useRef<string[]>([])
   const [unparseableCount, setUnparseableCount] = useState(0)
+
+  const bumpVersion = useCallback(() => {
+    setVersion((v) => v + 1)
+  }, [])
 
   useEffect(() => {
     const logBuffer = new LogBuffer(
@@ -55,7 +65,9 @@ function useLogIngestion(
         }
         return
       }
-      const entry = convertIpcToLogEntry(ipcLine, lanes)
+      // WHY: Read lanesRef.current at invocation time (not from closure) so that
+      // new entries are classified against the latest lane order after reorder/add.
+      const entry = convertIpcToLogEntry(ipcLine, lanesRef.current)
       logBuffer.push(entry)
     })
 
@@ -79,7 +91,10 @@ function useLogIngestion(
       unsubConfigError()
       logBuffer.close() // idempotent -- safe even if onStreamEnd already called it
     }
-  }, [masterList, lanes, config])
+    // WHY: lanesRef is a stable ref object -- NOT included as dependency.
+    // Lane changes are picked up at invocation time via lanesRef.current.
+    // config stability is assumed (never changes after init; Phase 07 may need ref pattern too).
+  }, [masterList, lanesRef, config])
 
   // WHY: unparseableCount triggers re-reads of unparseableRef.current
   // This avoids making the full array part of state (which would copy on every push)
@@ -91,7 +106,8 @@ function useLogIngestion(
     error,
     unparseableEntries: unparseableRef.current,
     mode,
-    setMode
+    setMode,
+    bumpVersion
   }
 }
 
