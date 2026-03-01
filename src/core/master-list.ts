@@ -7,7 +7,7 @@ import type { LogEntry } from './types'
  */
 class MasterList {
   private readonly _entries: LogEntry[] = []
-  private readonly maxEntries: number
+  private maxEntries: number
 
   constructor(maxEntries: number) {
     this.maxEntries = maxEntries
@@ -54,6 +54,15 @@ class MasterList {
    */
   get entries(): readonly LogEntry[] {
     return this._entries
+  }
+
+  /**
+   * Update the maximum number of entries.
+   * If the current count exceeds the new limit, the oldest entries are evicted immediately.
+   */
+  setMaxEntries(n: number): void {
+    this.maxEntries = n
+    this.evict()
   }
 
   /**

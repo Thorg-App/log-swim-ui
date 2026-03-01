@@ -44,13 +44,21 @@ function useLogIngestion(
   const unparseableRef = useRef<string[]>([])
   const [unparseableCount, setUnparseableCount] = useState(0)
 
+  // WHY: configRef prevents IPC listener teardown when config changes (e.g. settings panel edits).
+  // The LogBuffer reads flushIntervalMs only at creation time. Any config value needed inside
+  // the IPC callback should be read from configRef.current at invocation time.
+  const configRef = useRef(config)
+  useEffect(() => {
+    configRef.current = config
+  }, [config])
+
   const bumpVersion = useCallback(() => {
     setVersion((v) => v + 1)
   }, [])
 
   useEffect(() => {
     const logBuffer = new LogBuffer(
-      { flushIntervalMs: config.performance.flushIntervalMs },
+      { flushIntervalMs: configRef.current.performance.flushIntervalMs },
       (entries) => {
         masterList.insertBatch(entries)
         setVersion((v) => v + 1)
@@ -91,11 +99,10 @@ function useLogIngestion(
       unsubConfigError()
       logBuffer.close() // idempotent -- safe even if onStreamEnd already called it
     }
-    // WHY: lanesRef is a stable ref object -- its identity never changes, so including it
-    // in the dependency array does NOT cause re-runs. Lane changes are picked up at
-    // invocation time via lanesRef.current inside the onLogLine callback.
-    // config stability is assumed (never changes after init; Phase 07 may need ref pattern too).
-  }, [masterList, lanesRef, config])
+    // WHY: lanesRef and configRef are stable ref objects -- their identities never change,
+    // so including them does NOT cause re-runs. Lane changes and config changes are picked
+    // up at invocation time via .current inside callbacks.
+  }, [masterList, lanesRef, configRef])
 
   // WHY: unparseableCount triggers re-reads of unparseableRef.current
   // This avoids making the full array part of state (which would copy on every push)

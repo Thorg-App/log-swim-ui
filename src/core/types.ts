@@ -86,7 +86,8 @@ const IPC_CHANNELS = {
   CONFIG_ERROR: 'config-error',
   GET_CONFIG: 'get-config',
   SAVE_CONFIG: 'save-config',
-  GET_CLI_ARGS: 'get-cli-args'
+  GET_CLI_ARGS: 'get-cli-args',
+  RESET_CONFIG: 'reset-config'
 } as const
 
 // --- ElectronApi (preload bridge contract) ---
@@ -103,6 +104,7 @@ interface ElectronApi {
   getConfig: () => Promise<AppConfig>
   saveConfig: (config: AppConfig) => Promise<void>
   getCliArgs: () => Promise<CliArgsResult>
+  resetConfig: () => Promise<AppConfig>
 }
 
 interface CliArgsResult {
@@ -168,6 +170,18 @@ const DEFAULT_APP_CONFIG: AppConfig = {
   }
 }
 
+// --- Config Constraints (UI validation bounds) ---
+// Single source of truth for min/max of numeric config fields.
+// Used by SettingsPanel for inline validation. NOT used by ConfigValidator
+// (file validation uses permissive > 0 checks to avoid breaking existing user configs).
+
+const CONFIG_CONSTRAINTS = {
+  rowHeight: { min: 16, max: 128 },
+  fontSize: { min: 8, max: 32 },
+  flushIntervalMs: { min: 50, max: 5000 },
+  maxLogEntries: { min: 100, max: 1_000_000 }
+} as const
+
 // --- Known Log Levels ---
 // Single source of truth for recognized log level names.
 // Referenced by: log-row-utils (CSS class mapping), applyConfigToCSS (CSS variable mapping),
@@ -229,6 +243,7 @@ export {
   APP_ERROR_TYPES,
   IPC_CHANNELS,
   DEFAULT_APP_CONFIG,
+  CONFIG_CONSTRAINTS,
   KNOWN_LOG_LEVELS,
   createLaneDefinition
 }

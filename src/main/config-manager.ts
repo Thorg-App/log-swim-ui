@@ -303,6 +303,15 @@ class ConfigManager {
   }
 
   /**
+   * Reset config to defaults: save DEFAULT_APP_CONFIG to disk and return it.
+   */
+  async reset(): Promise<AppConfig> {
+    this.currentConfig = DEFAULT_APP_CONFIG
+    await this.writeToDisk(DEFAULT_APP_CONFIG)
+    return DEFAULT_APP_CONFIG
+  }
+
+  /**
    * Returns current in-memory config (synchronous).
    */
   getConfig(): AppConfig {

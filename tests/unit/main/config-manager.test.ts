@@ -335,6 +335,41 @@ describe('ConfigManager', () => {
     })
   })
 
+  describe('GIVEN a ConfigManager with a custom config loaded', () => {
+    const customConfig: AppConfig = {
+      ...DEFAULT_APP_CONFIG,
+      ui: { ...DEFAULT_APP_CONFIG.ui, rowHeight: 64, fontSize: 18 }
+    }
+
+    describe('WHEN reset() is called', () => {
+      it('THEN getConfig() returns DEFAULT_APP_CONFIG', async () => {
+        const manager = new ConfigManager(tempDir)
+        await manager.save(customConfig)
+        expect(manager.getConfig().ui.rowHeight).toBe(64)
+
+        await manager.reset()
+        expect(manager.getConfig()).toEqual(DEFAULT_APP_CONFIG)
+      })
+
+      it('THEN the config file on disk matches DEFAULT_APP_CONFIG', async () => {
+        const manager = new ConfigManager(tempDir)
+        await manager.save(customConfig)
+
+        await manager.reset()
+        const fileContent = await readConfigFile() as AppConfig
+        expect(fileContent).toEqual(DEFAULT_APP_CONFIG)
+      })
+
+      it('THEN returns DEFAULT_APP_CONFIG', async () => {
+        const manager = new ConfigManager(tempDir)
+        await manager.save(customConfig)
+
+        const result = await manager.reset()
+        expect(result).toEqual(DEFAULT_APP_CONFIG)
+      })
+    })
+  })
+
   describe('GIVEN config file with multiple validation errors', () => {
     describe('WHEN load() is called', () => {
       it('THEN error message contains all validation errors', async () => {
