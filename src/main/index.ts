@@ -85,6 +85,7 @@ app.whenReady().then(async () => {
   // Register IPC handlers (request channels: renderer -> main)
   ipcMain.handle(IPC_CHANNELS.GET_CONFIG, () => configManager.getConfig())
   ipcMain.handle(IPC_CHANNELS.SAVE_CONFIG, (_event, config) => configManager.save(config))
+  ipcMain.handle(IPC_CHANNELS.RESET_CONFIG, async () => configManager.reset())
   ipcMain.handle(IPC_CHANNELS.GET_CLI_ARGS, () => ({
     keyLevel: cliArgs.keyLevel,
     keyTimestamp: cliArgs.keyTimestamp,

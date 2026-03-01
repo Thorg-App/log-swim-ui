@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, access } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AppConfig, AppConfigColors, AppConfigUI, AppConfigPerformance } from '../core/types'
 import { DEFAULT_APP_CONFIG, VIEW_TIMESTAMP_FORMATS } from '../core/types'
+import { HEX_COLOR_PATTERN } from '../core/config-validation'
 
 // --- Config Load Result (discriminated union) ---
 
@@ -20,8 +21,6 @@ interface ConfigLoadFailure {
 type ConfigLoadResult = ConfigLoadSuccess | ConfigLoadFailure
 
 // --- Validation ---
-
-const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/
 
 class ConfigValidator {
   static validate(loaded: Record<string, unknown>): readonly string[] {
@@ -300,6 +299,15 @@ class ConfigManager {
     await mkdir(join(this.configPath, '..'), { recursive: true })
     this.currentConfig = config
     await this.writeToDisk(config)
+  }
+
+  /**
+   * Reset config to defaults: save DEFAULT_APP_CONFIG to disk and return it.
+   */
+  async reset(): Promise<AppConfig> {
+    this.currentConfig = DEFAULT_APP_CONFIG
+    await this.writeToDisk(DEFAULT_APP_CONFIG)
+    return DEFAULT_APP_CONFIG
   }
 
   /**

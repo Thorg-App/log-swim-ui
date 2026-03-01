@@ -144,6 +144,85 @@ describe('MasterList', () => {
     })
   })
 
+  describe('setMaxEntries', () => {
+    describe('GIVEN a list with 100 entries and maxEntries=100', () => {
+      describe('WHEN setMaxEntries(50) is called', () => {
+        it('THEN length is 50', () => {
+          const list = new MasterList(100)
+          for (let i = 0; i < 100; i++) {
+            list.insert(makeEntry(i * 1000, `entry-${i}`))
+          }
+          expect(list.length).toBe(100)
+
+          list.setMaxEntries(50)
+          expect(list.length).toBe(50)
+        })
+
+        it('THEN the oldest 50 entries are removed', () => {
+          const list = new MasterList(100)
+          for (let i = 0; i < 100; i++) {
+            list.insert(makeEntry(i * 1000, `entry-${i}`))
+          }
+
+          list.setMaxEntries(50)
+          // entry-0 through entry-49 should be gone; entry-50 should be first
+          expect(list.get(0)?.fields['label']).toBe('entry-50')
+          expect(list.get(49)?.fields['label']).toBe('entry-99')
+        })
+      })
+    })
+
+    describe('GIVEN a list with 50 entries and maxEntries=100', () => {
+      describe('WHEN setMaxEntries(200) is called', () => {
+        it('THEN length remains 50 (no eviction needed)', () => {
+          const list = new MasterList(100)
+          for (let i = 0; i < 50; i++) {
+            list.insert(makeEntry(i * 1000, `entry-${i}`))
+          }
+
+          list.setMaxEntries(200)
+          expect(list.length).toBe(50)
+        })
+      })
+    })
+
+    describe('GIVEN a list with entries', () => {
+      describe('WHEN setMaxEntries is called with a value equal to current length', () => {
+        it('THEN no entries are evicted', () => {
+          const list = new MasterList(100)
+          for (let i = 0; i < 5; i++) {
+            list.insert(makeEntry(i * 1000, `entry-${i}`))
+          }
+
+          list.setMaxEntries(5)
+          expect(list.length).toBe(5)
+          expect(list.get(0)?.fields['label']).toBe('entry-0')
+          expect(list.get(4)?.fields['label']).toBe('entry-4')
+        })
+      })
+    })
+
+    describe('GIVEN setMaxEntries was called to lower the limit', () => {
+      describe('WHEN new entries are inserted', () => {
+        it('THEN eviction respects the new limit', () => {
+          const list = new MasterList(100)
+          for (let i = 0; i < 5; i++) {
+            list.insert(makeEntry(i * 1000, `entry-${i}`))
+          }
+
+          list.setMaxEntries(3)
+          expect(list.length).toBe(3)
+
+          // Insert one more -- should still respect max of 3
+          list.insert(makeEntry(5000, 'entry-5'))
+          expect(list.length).toBe(3)
+          expect(list.get(0)?.fields['label']).toBe('entry-3')
+          expect(list.get(2)?.fields['label']).toBe('entry-5')
+        })
+      })
+    })
+  })
+
   describe('entries', () => {
     describe('GIVEN a list with entries', () => {
       it('THEN entries returns a readonly view of all entries', () => {

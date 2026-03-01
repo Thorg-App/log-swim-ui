@@ -30,7 +30,8 @@ const api: ElectronApi = {
   // Request channels (renderer -> main): invoke and await response
   getConfig: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CONFIG),
   saveConfig: (config) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_CONFIG, config),
-  getCliArgs: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CLI_ARGS)
+  getCliArgs: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CLI_ARGS),
+  resetConfig: () => ipcRenderer.invoke(IPC_CHANNELS.RESET_CONFIG)
 }
 
 contextBridge.exposeInMainWorld('api', api)

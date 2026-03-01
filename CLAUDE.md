@@ -163,7 +163,10 @@ describe('GIVEN a log entry with level "error"', () => {
 - Use CSS classes that reference custom property tokens.
 
 ### Runtime Config Override
-- `applyConfigToCSS(config: AppConfig)` maps config values to CSS custom properties at runtime via `document.documentElement.style.setProperty()`. Called by `useAppInit` after loading config via `window.api.getConfig()`. Derives level CSS variable names mechanically from `KNOWN_LOG_LEVELS` (single source of truth in `src/core/types.ts`).
+- `applyConfigToCSS(config: AppConfig)` maps config values to CSS custom properties at runtime via `document.documentElement.style.setProperty()`. Called by `useAppInit` after loading config via `window.api.getConfig()`, and by `SettingsPanel` (debounced 150ms) for live preview. Derives level CSS variable names mechanically from `KNOWN_LOG_LEVELS` (single source of truth in `src/core/types.ts`).
+
+### Inline Style Exception
+- `SettingsPanel` color swatches use inline `style={{ backgroundColor }}` -- the only exception to the "no inline styles" rule. Dynamic color preview requires runtime-computed `background-color` that cannot be expressed as a CSS class.
 
 ---
 
@@ -194,7 +197,7 @@ src/
   main/          # Electron main process (Node.js context)
                  # - index.ts: App startup orchestration (TTY check, CLI parse, config load, IPC handlers, bridge start, E2E test seam)
                  # - cli-parser.ts: CliParser (static) -- parse --key-level, --key-timestamp, --lanes
-                 # - config-manager.ts: ConfigManager (static) -- load/validate/merge/save config, ConfigValidator (static)
+                 # - config-manager.ts: ConfigManager (static) -- load/validate/merge/save/reset config, ConfigValidator (static)
                  # - ipc-bridge.ts: IpcBridge -- stdin → JsonParser → TimestampDetector → IPC send pipeline
   preload/       # Preload scripts (bridge between main and renderer)
                  # - index.ts: contextBridge API -- whitelisted IPC channel exposure
@@ -202,11 +205,11 @@ src/
   renderer/      # React renderer process (browser context)
     src/         # React app, hooks, utilities
                  # - main.tsx: React entry point (renders App into DOM)
-                 # - App.tsx: Top-level state machine (loading → error | ready), manages lane/filter state, wires hooks to components
+                 # - App.tsx: Top-level state machine (loading → error | ready), manages lane/filter/config/settings state, wires hooks to components
                  # - ErrorScreen.tsx: Full-screen error display with config revert action
                  # - DesignReferencePage.tsx: Dev-only design system reference (not rendered by App.tsx)
                  # - useAppInit.ts: Init hook -- load config, CLI args, create MasterList, apply CSS tokens
-                 # - useLogIngestion.ts: IPC wiring + log state (version, stream state, unparseable, view mode); accepts lanesRef for stable IPC callbacks
+                 # - useLogIngestion.ts: IPC wiring + log state (version, stream state, unparseable, view mode); accepts lanesRef + configRef for stable IPC callbacks
                  # - timestamp-formatter.ts: Format timestamps (iso, local, relative)
                  # - ipc-converters.ts: Convert IPC types (IpcLogLine) to renderer types (LogEntry)
                  # - log-row-utils.ts: Pure display utilities for LogRow (CSS class, message preview, grid column)
@@ -221,6 +224,7 @@ src/
                  # - LaneAddInput.tsx: Ad-hoc lane regex input (insert before unmatched)
                  # - ModeToggle.tsx: Pill-shaped Live/Scroll toggle
                  # - StreamEndIndicator.tsx: Subtle badge shown when stdin closes
+                 # - SettingsPanel.tsx: Slide-out settings panel with Colors/UI/Performance sections, live CSS preview, save/reset
                  # - UnparseablePanel.tsx: Bottom panel for failed-timestamp entries
     theme/       # CSS design system
                  # - tokens.css: CSS custom properties (:root)
@@ -228,18 +232,19 @@ src/
                  # - design-reference.css: Dev-only styles for DesignReferencePage
     index.html   # HTML entry point
   core/          # Shared pure logic (no Electron or React imports)
-                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS, ElectronApi, CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType, createLaneDefinition
+                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS (incl. RESET_CONFIG), ElectronApi (incl. resetConfig), CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType, CONFIG_CONSTRAINTS, createLaneDefinition
+                 # - config-validation.ts: Pure validation helpers for config fields (isValidHexColor, isInRange, HEX_COLOR_PATTERN)
                  # - filter.ts: FilterEngine (static) -- create/toggle/match filters; Filter discriminated union (FieldFilter | RawFilter)
                  # - json-parser.ts: JsonParser (static) -- raw string → ParsedLine
                  # - timestamp-detector.ts: TimestampDetector -- detect/lock format, parse timestamps
                  # - lane-classifier.ts: LaneClassifier (static) -- first-match-wins classification
-                 # - master-list.ts: MasterList -- sorted collection with binary-search insert + eviction
+                 # - master-list.ts: MasterList -- sorted collection with binary-search insert + eviction + setMaxEntries(n)
                  # - log-buffer.ts: LogBuffer -- timer-based flush with callback
                  # - stdin-reader.ts: StdinReader (static) -- line-by-line Readable stream reading (Node.js only)
 tests/
   unit/          # Vitest unit tests
   e2e/           # Playwright E2E tests
-                 # - app.spec.ts: 11 E2E test cases (lane headers, log rows, expand/collapse, filtering, lane add, mode toggle, stream-end)
+                 # - app.spec.ts: 14 E2E test cases (lane headers, log rows, expand/collapse, filtering, lane add, mode toggle, stream-end, settings panel)
     helpers/     # E2E test utilities
                  # - electron-app.ts: launchApp, injectLogLines, sendStreamEnd, waitForFlush, createIpcLogLine
 bin/             # CLI entry point (npm global install)

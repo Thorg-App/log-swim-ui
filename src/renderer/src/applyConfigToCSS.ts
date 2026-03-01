@@ -36,4 +36,5 @@ export function applyConfigToCSS(config: AppConfig): void {
   // UI properties
   root.style.setProperty('--row-height', config.ui.rowHeight + 'px')
   root.style.setProperty('--text-sm', config.ui.fontSize + 'px')
+  root.style.setProperty('--font-mono', config.ui.fontFamily)
 }
