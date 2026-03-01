@@ -92,6 +92,12 @@ function useLogIngestion(
       setError({ type: 'config-error', message: msg })
     })
 
+    // WHY: Signal to main process that all IPC listeners are now registered.
+    // Main waits for this before starting stdin ingestion (IpcBridge.start()),
+    // preventing the race where LOG_LINE/STREAM_END messages are sent before
+    // listeners exist and silently dropped by Electron IPC.
+    window.api.signalReady()
+
     return () => {
       unsubLogLine()
       unsubStreamEnd()

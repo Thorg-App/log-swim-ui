@@ -87,7 +87,11 @@ const IPC_CHANNELS = {
   GET_CONFIG: 'get-config',
   SAVE_CONFIG: 'save-config',
   GET_CLI_ARGS: 'get-cli-args',
-  RESET_CONFIG: 'reset-config'
+  RESET_CONFIG: 'reset-config',
+  // WHY: Renderer signals it has registered all IPC listeners. Main waits for this
+  // before starting stdin ingestion, preventing the race where messages are sent
+  // before the renderer is ready to receive them.
+  RENDERER_READY: 'renderer-ready'
 } as const
 
 // --- ElectronApi (preload bridge contract) ---
@@ -105,6 +109,9 @@ interface ElectronApi {
   saveConfig: (config: AppConfig) => Promise<void>
   getCliArgs: () => Promise<CliArgsResult>
   resetConfig: () => Promise<AppConfig>
+
+  // Handshake signal (renderer -> main): notify that all IPC listeners are registered
+  signalReady: () => void
 }
 
 interface CliArgsResult {

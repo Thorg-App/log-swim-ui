@@ -95,14 +95,46 @@ app.whenReady().then(async () => {
   // Wait for window to finish loading before starting IPC bridge
   // WHY: webContents.send silently drops messages before did-finish-load
   mainWindow.webContents.on('did-finish-load', () => {
-    // Send config error if applicable
-    if (!configResult.ok) {
-      mainWindow.webContents.send(IPC_CHANNELS.CONFIG_ERROR, configResult.error)
-    }
-
     // WHY: In E2E mode, test data is injected via webContents.send() from Playwright,
     // not via stdin. Skip IpcBridge to avoid reading Playwright's control pipe as log data.
-    if (!isE2eTest) {
+    // E2E tests have their own implicit handshake (waitForSelector('.swimlane-grid'))
+    // so they do not need the RENDERER_READY signal.
+    if (isE2eTest) {
+      // Send config error if applicable (E2E mode: no bridge, no handshake needed)
+      if (!configResult.ok) {
+        mainWindow.webContents.send(IPC_CHANNELS.CONFIG_ERROR, configResult.error)
+      }
+      return
+    }
+
+    // WHY: did-finish-load fires when the HTML/JS loads, but React's useEffect hooks
+    // (which register IPC listeners) run asynchronously later. If we start stdin
+    // ingestion now, all LOG_LINE and STREAM_END messages are sent before the renderer
+    // registers its listeners, causing complete data loss (e.g. `cat file | log-swim-ui`).
+    // The renderer calls signalReady() after ALL IPC listeners are registered in
+    // useLogIngestion, ensuring no messages are dropped.
+    const RENDERER_READY_TIMEOUT_MS = 10_000
+
+    const timeoutId = setTimeout(() => {
+      // WHY: Safety net -- if renderer crashes or fails to signal, avoid hanging forever.
+      // Start the bridge anyway; data may be lost, but the app does not freeze.
+      console.error(
+        `[log-swim-ui] renderer did not signal ready within ${RENDERER_READY_TIMEOUT_MS}ms, starting bridge anyway`
+      )
+      startBridge()
+    }, RENDERER_READY_TIMEOUT_MS)
+
+    ipcMain.once(IPC_CHANNELS.RENDERER_READY, () => {
+      clearTimeout(timeoutId)
+      startBridge()
+    })
+
+    function startBridge(): void {
+      // Send config error if applicable
+      if (!configResult.ok) {
+        mainWindow.webContents.send(IPC_CHANNELS.CONFIG_ERROR, configResult.error)
+      }
+
       // Start the IPC bridge (stdin -> parse -> IPC to renderer)
       const bridge = new IpcBridge({
         keyLevel: cliArgs.keyLevel,

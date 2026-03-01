@@ -31,7 +31,10 @@ const api: ElectronApi = {
   getConfig: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CONFIG),
   saveConfig: (config) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_CONFIG, config),
   getCliArgs: () => ipcRenderer.invoke(IPC_CHANNELS.GET_CLI_ARGS),
-  resetConfig: () => ipcRenderer.invoke(IPC_CHANNELS.RESET_CONFIG)
+  resetConfig: () => ipcRenderer.invoke(IPC_CHANNELS.RESET_CONFIG),
+
+  // Handshake signal: renderer tells main that all IPC listeners are registered
+  signalReady: () => ipcRenderer.send(IPC_CHANNELS.RENDERER_READY)
 }
 
 contextBridge.exposeInMainWorld('api', api)
