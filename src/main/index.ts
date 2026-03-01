@@ -114,6 +114,7 @@ app.whenReady().then(async () => {
     // The renderer calls signalReady() after ALL IPC listeners are registered in
     // useLogIngestion, ensuring no messages are dropped.
     const RENDERER_READY_TIMEOUT_MS = 10_000
+    let bridgeStarted = false
 
     const timeoutId = setTimeout(() => {
       // WHY: Safety net -- if renderer crashes or fails to signal, avoid hanging forever.
@@ -129,7 +130,11 @@ app.whenReady().then(async () => {
       startBridge()
     })
 
+    // WHY: Guard prevents double invocation if both timeout and RENDERER_READY fire
+    // (e.g. renderer signals just after timeout fires but before once-listener is removed).
     function startBridge(): void {
+      if (bridgeStarted) return
+      bridgeStarted = true
       // Send config error if applicable
       if (!configResult.ok) {
         mainWindow.webContents.send(IPC_CHANNELS.CONFIG_ERROR, configResult.error)
