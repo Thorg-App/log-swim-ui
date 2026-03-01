@@ -72,19 +72,27 @@ function AppShell({ config, initialLanes, masterList }: AppShellProps) {
     bumpVersion
   } = useLogIngestion(masterList, lanesRef, config)
 
-  // --- Lane handlers (used by LaneAddInput and drag-and-drop in 6C/6D) ---
+  // --- Lane mutation helper (DRY: set lanes + reclassify + bump in one place) ---
+
+  const applyLaneChange = useCallback(
+    (newLanes: LaneDefinition[]) => {
+      setLanes(newLanes)
+      LaneClassifier.reclassifyAll(masterList.entries, newLanes)
+      bumpVersion()
+    },
+    [masterList, bumpVersion]
+  )
+
+  // --- Lane handlers (used by LaneAddInput and drag-and-drop) ---
 
   const handleAddLane = useCallback(
     (pattern: string) => {
       const newLane = createLaneDefinition(pattern)
       // Insert before "unmatched" position (i.e. append to lanes array,
       // since "unmatched" is implicit at lanes.length)
-      const newLanes = [...lanes, newLane]
-      setLanes(newLanes)
-      LaneClassifier.reclassifyAll(masterList.entries, newLanes)
-      bumpVersion()
+      applyLaneChange([...lanes, newLane])
     },
-    [lanes, masterList, bumpVersion]
+    [lanes, applyLaneChange]
   )
 
   const handleReorderLanes = useCallback(
@@ -95,11 +103,9 @@ function AppShell({ config, initialLanes, masterList }: AppShellProps) {
       const [moved] = newLanes.splice(fromIndex, 1)
       newLanes.splice(toIndex, 0, moved)
 
-      setLanes(newLanes)
-      LaneClassifier.reclassifyAll(masterList.entries, newLanes)
-      bumpVersion()
+      applyLaneChange(newLanes)
     },
-    [lanes, masterList, bumpVersion]
+    [lanes, applyLaneChange]
   )
 
   // --- Filter handlers (used by FilterBar in 6C) ---
