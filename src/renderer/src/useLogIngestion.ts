@@ -82,6 +82,7 @@ function useLogIngestion(
     const unsubStreamEnd = window.api.onStreamEnd(() => {
       logBuffer.close()
       setStreamEnded(true)
+      setMode('scroll')
     })
 
     const unsubStreamError = window.api.onStreamError((msg) => {
