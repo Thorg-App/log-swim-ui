@@ -146,6 +146,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: text;
 }
 
 .lane-header--error {
@@ -178,6 +179,51 @@ body {
 .lane-header__drag-handle[draggable="true"]:active {
   cursor: grabbing;
 }
+
+/* Inline edit input for lane pattern */
+.lane-header__edit-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-1);
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-focus);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+/* Case-sensitivity toggle on lane header */
+.lane-header__case-toggle {
+  font-size: var(--text-xs);
+  color: var(--color-text-disabled);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.lane-header__case-toggle--active {
+  color: var(--color-primary);
+}
+
+.lane-header__case-toggle:hover {
+  color: var(--color-text-primary);
+}
+
+/* Remove button on lane header */
+.lane-header__remove {
+  color: var(--color-text-disabled);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.lane-header__remove:hover {
+  color: var(--color-error);
+}
+
 
 /* =====================================================================
  * Swimlane Grid

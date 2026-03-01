@@ -205,7 +205,7 @@ src/
   renderer/      # React renderer process (browser context)
     src/         # React app, hooks, utilities
                  # - main.tsx: React entry point (renders App into DOM)
-                 # - App.tsx: Top-level state machine (loading → error | ready), manages lane/filter/config/settings state, wires hooks to components
+                 # - App.tsx: Top-level state machine (loading → error | ready), manages lane/filter/config/settings state, wires hooks to components; lane handlers: add, reorder, edit, remove, toggleCaseSensitivity
                  # - ErrorScreen.tsx: Full-screen error display with config revert action
                  # - DesignReferencePage.tsx: Dev-only design system reference (not rendered by App.tsx)
                  # - useAppInit.ts: Init hook -- load config, CLI args, create MasterList, apply CSS tokens
@@ -218,7 +218,7 @@ src/
       components/  # React components
                  # - SwimLaneGrid.tsx: Virtualized CSS grid with @tanstack/react-virtual, auto-scroll, filtering, lane DnD reorder
                  # - LogRow.tsx: Single log row (collapsed/expanded), colored left border by level
-                 # - LaneHeader.tsx: Lane column header (regex pattern with truncation, drag handle for reorder)
+                 # - LaneHeader.tsx: Lane column header (regex pattern with truncation, drag handle for reorder, inline edit, remove button, case sensitivity toggle)
                  # - FilterBar.tsx: "Global Filter" bar (topmost row) with inline add form, include/exclude mode toggle, case sensitivity toggle, rightSlot for ModeToggle
                  # - FilterChip.tsx: Individual filter chip with mode indicator (+/-), case sensitivity indicator (Aa/aa), toggle/remove, exclude styling
                  # - LaneAddInput.tsx: Ad-hoc lane regex input (insert before unmatched)
@@ -232,7 +232,7 @@ src/
                  # - design-reference.css: Dev-only styles for DesignReferencePage
     index.html   # HTML entry point
   core/          # Shared pure logic (no Electron or React imports)
-                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS (incl. RESET_CONFIG, RENDERER_READY), ElectronApi (incl. resetConfig, signalReady), CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType, CONFIG_CONSTRAINTS, createLaneDefinition
+                 # - types.ts: LogEntry, LaneDefinition (incl. caseSensitive), AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS (incl. RESET_CONFIG, RENDERER_READY), ElectronApi (incl. resetConfig, signalReady), CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType, CONFIG_CONSTRAINTS, createLaneDefinition (accepts CreateLaneDefinitionOptions)
                  # - config-validation.ts: Pure validation helpers for config fields (isValidHexColor, isInRange, HEX_COLOR_PATTERN)
                  # - filter.ts: FilterEngine (static) -- create/toggle/match filters, toggleMode(), toggleCaseSensitivity(); Filter discriminated union (FieldFilter | RawFilter) with FilterMode (include|exclude), FilterOptions (mode, caseSensitive), FILTER_MODES
                  # - json-parser.ts: JsonParser (static) -- raw string → ParsedLine
@@ -244,7 +244,7 @@ src/
 tests/
   unit/          # Vitest unit tests
   e2e/           # Playwright E2E tests
-                 # - app.spec.ts: 15 E2E test cases (lane headers, log rows, expand/collapse, filtering, lane add, mode toggle, stream-end mode switch, settings panel)
+                 # - app.spec.ts: 21 E2E test cases (lane headers, log rows, expand/collapse, filtering, lane add, lane edit, lane remove, lane case sensitivity, mode toggle, stream-end mode switch, settings panel)
     helpers/     # E2E test utilities
                  # - electron-app.ts: launchApp, injectLogLines, sendStreamEnd, waitForFlush, createIpcLogLine
 bin/             # CLI entry point (npm global install)

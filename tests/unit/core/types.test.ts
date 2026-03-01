@@ -31,6 +31,66 @@ describe('createLaneDefinition', () => {
       })
     })
   })
+
+  describe('GIVEN no caseSensitive option', () => {
+    describe('WHEN createLaneDefinition is called', () => {
+      it('THEN defaults caseSensitive to true', () => {
+        const lane = createLaneDefinition('error')
+        expect(lane.caseSensitive).toBe(true)
+      })
+
+      it('THEN compiles regex without flags', () => {
+        const lane = createLaneDefinition('error')
+        expect(lane.regex?.flags).toBe('')
+      })
+    })
+  })
+
+  describe('GIVEN caseSensitive option set to false', () => {
+    describe('WHEN createLaneDefinition is called', () => {
+      it('THEN caseSensitive is false', () => {
+        const lane = createLaneDefinition('error', { caseSensitive: false })
+        expect(lane.caseSensitive).toBe(false)
+      })
+
+      it('THEN compiles regex with "i" flag', () => {
+        const lane = createLaneDefinition('error', { caseSensitive: false })
+        expect(lane.regex?.flags).toBe('i')
+      })
+
+      it('THEN the regex matches case-insensitively', () => {
+        const lane = createLaneDefinition('error', { caseSensitive: false })
+        expect(lane.regex?.test('ERROR')).toBe(true)
+        expect(lane.regex?.test('Error')).toBe(true)
+        expect(lane.regex?.test('error')).toBe(true)
+      })
+    })
+  })
+
+  describe('GIVEN caseSensitive option set to true', () => {
+    describe('WHEN createLaneDefinition is called', () => {
+      it('THEN caseSensitive is true', () => {
+        const lane = createLaneDefinition('error', { caseSensitive: true })
+        expect(lane.caseSensitive).toBe(true)
+      })
+
+      it('THEN the regex matches case-sensitively', () => {
+        const lane = createLaneDefinition('error', { caseSensitive: true })
+        expect(lane.regex?.test('error')).toBe(true)
+        expect(lane.regex?.test('ERROR')).toBe(false)
+      })
+    })
+  })
+
+  describe('GIVEN an invalid regex pattern with caseSensitive false', () => {
+    describe('WHEN createLaneDefinition is called', () => {
+      it('THEN returns isError true and preserves caseSensitive', () => {
+        const lane = createLaneDefinition('[invalid', { caseSensitive: false })
+        expect(lane.isError).toBe(true)
+        expect(lane.caseSensitive).toBe(false)
+      })
+    })
+  })
 })
 
 describe('DEFAULT_APP_CONFIG', () => {

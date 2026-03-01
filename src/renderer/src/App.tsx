@@ -116,6 +116,38 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
     [lanes, applyLaneChange]
   )
 
+  const handleEditLane = useCallback(
+    (index: number, newPattern: string) => {
+      const existing = lanes[index]
+      if (existing === undefined) return
+      const newLane = createLaneDefinition(newPattern, { caseSensitive: existing.caseSensitive })
+      const newLanes = [...lanes]
+      newLanes[index] = newLane
+      applyLaneChange(newLanes)
+    },
+    [lanes, applyLaneChange]
+  )
+
+  const handleRemoveLane = useCallback(
+    (index: number) => {
+      const newLanes = lanes.filter((_, i) => i !== index)
+      applyLaneChange(newLanes)
+    },
+    [lanes, applyLaneChange]
+  )
+
+  const handleToggleLaneCaseSensitivity = useCallback(
+    (index: number) => {
+      const existing = lanes[index]
+      if (existing === undefined) return
+      const newLane = createLaneDefinition(existing.pattern, { caseSensitive: !existing.caseSensitive })
+      const newLanes = [...lanes]
+      newLanes[index] = newLane
+      applyLaneChange(newLanes)
+    },
+    [lanes, applyLaneChange]
+  )
+
   // --- Filter handlers (used by FilterBar) ---
 
   const handleAddFilter = useCallback(
@@ -236,6 +268,9 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
             mode={mode}
             onScrollUp={() => setMode('scroll')}
             onReorderLanes={handleReorderLanes}
+            onEditLane={handleEditLane}
+            onRemoveLane={handleRemoveLane}
+            onToggleLaneCaseSensitivity={handleToggleLaneCaseSensitivity}
           />
         </div>
         {unparseableEntries.length > 0 && (

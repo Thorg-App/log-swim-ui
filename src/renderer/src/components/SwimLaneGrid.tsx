@@ -22,6 +22,9 @@ interface SwimLaneGridProps {
   readonly mode: ViewMode
   readonly onScrollUp: () => void // callback to switch to scroll mode
   readonly onReorderLanes: (fromIndex: number, toIndex: number) => void
+  readonly onEditLane: (index: number, newPattern: string) => void
+  readonly onRemoveLane: (index: number) => void
+  readonly onToggleLaneCaseSensitivity: (index: number) => void
 }
 
 /**
@@ -41,7 +44,10 @@ function SwimLaneGrid({
   rowHeight,
   mode,
   onScrollUp,
-  onReorderLanes
+  onReorderLanes,
+  onEditLane,
+  onRemoveLane,
+  onToggleLaneCaseSensitivity
 }: SwimLaneGridProps) {
   const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -155,12 +161,16 @@ function SwimLaneGrid({
           pattern={lane.pattern}
           isError={lane.isError}
           isUnmatched={false}
+          caseSensitive={lane.caseSensitive}
           laneIndex={i}
           onDragStart={handleLaneDragStart}
           onDragOver={handleLaneDragOver}
           onDrop={handleLaneDrop}
           onDragEnd={handleLaneDragEnd}
           isDragOver={dragOverIndex === i}
+          onEdit={(newPattern) => onEditLane(i, newPattern)}
+          onRemove={() => onRemoveLane(i)}
+          onToggleCaseSensitivity={() => onToggleLaneCaseSensitivity(i)}
         />
       ))}
       {/* Unmatched lane header (always last) */}
@@ -169,6 +179,7 @@ function SwimLaneGrid({
         pattern="unmatched"
         isError={false}
         isUnmatched={true}
+        caseSensitive={true}
         laneIndex={lanes.length}
       />
 

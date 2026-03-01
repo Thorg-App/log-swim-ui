@@ -87,6 +87,28 @@ describe('LaneClassifier.classify', () => {
   })
 })
 
+describe('LaneClassifier.classify with case-insensitive lanes', () => {
+  describe('GIVEN a case-insensitive lane "error"', () => {
+    describe('WHEN classified with JSON containing "ERROR"', () => {
+      it('THEN matches the case-insensitive lane', () => {
+        const lanes = [createLaneDefinition('error', { caseSensitive: false })]
+        const result = LaneClassifier.classify('{"level":"ERROR","msg":"fail"}', lanes)
+        expect(result).toBe(0)
+      })
+    })
+  })
+
+  describe('GIVEN a case-sensitive lane "error"', () => {
+    describe('WHEN classified with JSON containing only "ERROR"', () => {
+      it('THEN does not match (case mismatch)', () => {
+        const lanes = [createLaneDefinition('error', { caseSensitive: true })]
+        const result = LaneClassifier.classify('{"level":"ERROR","msg":"FAIL"}', lanes)
+        expect(result).toBe(lanes.length)
+      })
+    })
+  })
+})
+
 describe('LaneClassifier.reclassifyAll', () => {
   describe('GIVEN entries and new lane order', () => {
     describe('WHEN reclassifyAll is called', () => {
