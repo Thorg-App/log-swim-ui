@@ -176,6 +176,9 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | `KnownLogLevel` | Union type derived from `KNOWN_LOG_LEVELS` | `src/core/types.ts` | `'trace' \| 'debug' \| ... \| 'critical'` |
 | `ViewMode` | Live vs Scroll mode union | `src/core/types.ts` | `'live' \| 'scroll'` |
 | `AppErrorType` | App error state union | `src/core/types.ts` | `'no-stdin' \| 'stream-error' \| 'config-error'` |
+| `Filter` | Discriminated union: FieldFilter \| RawFilter | `src/core/filter.ts` | `id, type, pattern, regex, enabled` (+ `field` for FieldFilter) |
+| `FilterEngine` | Static utility for creating/evaluating filters (AND logic) | `src/core/filter.ts` | `createFieldFilter, createRawFilter, toggleFilter, matchesFilter, matchesAllFilters` |
+| `createLaneDefinition` | Factory fn for LaneDefinition with safe regex compilation | `src/core/types.ts` | `(pattern: string) => LaneDefinition` |
 
 ### Core Pipeline Classes (Phase 03)
 
@@ -187,6 +190,7 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | `MasterList` | stateful | `src/core/master-list.ts` | Sorted collection with binary-search insert + eviction. |
 | `LogBuffer` | stateful | `src/core/log-buffer.ts` | Timer-based flush with callback. Final flush on close. |
 | `StdinReader` | static | `src/core/stdin-reader.ts` | Line-by-line Readable stream reading. Returns `StdinReaderHandle` with `stop()`. |
+| `FilterEngine` | static | `src/core/filter.ts` | Create, toggle, and evaluate log entry filters. AND logic across enabled filters. |
 
 ### Electron Shell & CLI Classes (Phase 04)
 
@@ -202,24 +206,27 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | Module | Kind | Location | Purpose |
 |--------|------|----------|---------|
 | `useAppInit` | hook | `src/renderer/src/useAppInit.ts` | Init orchestration: load config, CLI args, create MasterList, apply CSS tokens. |
-| `useLogIngestion` | hook | `src/renderer/src/useLogIngestion.ts` | IPC listener wiring, log state (version, stream state, unparseable tracking, view mode). |
+| `useLogIngestion` | hook | `src/renderer/src/useLogIngestion.ts` | IPC listener wiring, log state (version, stream state, unparseable tracking, view mode). Accepts `lanesRef` for stable IPC callbacks. Exposes `bumpVersion` for lane/filter reclassification triggers. |
 | `timestamp-formatter` | pure fn | `src/renderer/src/timestamp-formatter.ts` | Format timestamps in 3 modes: iso, local, relative. |
 | `ipc-converters` | pure fn | `src/renderer/src/ipc-converters.ts` | Convert `IpcLogLine` to `LogEntry` (classify + assign lane index). |
 | `log-row-utils` | pure fns | `src/renderer/src/log-row-utils.ts` | CSS class, message preview, grid column helpers for LogRow. |
 | `scroll-utils` | pure fn | `src/renderer/src/scroll-utils.ts` | `isScrollingUp(lastTop, currentTop, threshold)` detection. |
 | `applyConfigToCSS` | pure fn | `src/renderer/src/applyConfigToCSS.ts` | Map `AppConfig` to CSS custom properties via `setProperty()`. |
 
-### Renderer Components (Phase 05)
+### Renderer Components (Phase 05-06)
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `App` | `src/renderer/src/App.tsx` | Top-level state machine: loading → error \| ready. Wires hooks to components. |
+| `App` | `src/renderer/src/App.tsx` | Top-level state machine: loading → error \| ready. AppShell manages lane state, filter state, DnD reorder, and lane addition. |
 | `ErrorScreen` | `src/renderer/src/ErrorScreen.tsx` | Full-screen error display with config revert button. |
-| `SwimLaneGrid` | `src/renderer/src/components/SwimLaneGrid.tsx` | Virtualized CSS grid with `@tanstack/react-virtual`, auto-scroll in Live mode. |
+| `SwimLaneGrid` | `src/renderer/src/components/SwimLaneGrid.tsx` | Virtualized CSS grid with `@tanstack/react-virtual`, auto-scroll, render-time filtering via `filteredIndices`, lane DnD reorder. |
 | `LogRow` | `src/renderer/src/components/LogRow.tsx` | Single log row: collapsed (one-line preview) / expanded (pretty-printed JSON). |
-| `LaneHeader` | `src/renderer/src/components/LaneHeader.tsx` | Lane column header showing regex pattern. |
+| `LaneHeader` | `src/renderer/src/components/LaneHeader.tsx` | Lane column header showing regex pattern. Draggable handle for reorder (unmatched excluded). |
 | `ModeToggle` | `src/renderer/src/components/ModeToggle.tsx` | Pill-shaped Live/Scroll toggle. |
 | `StreamEndIndicator` | `src/renderer/src/components/StreamEndIndicator.tsx` | Subtle badge when stdin closes. |
+| `FilterBar` | `src/renderer/src/components/FilterBar.tsx` | Filter management bar with inline add form. Supports field and raw filter types. |
+| `FilterChip` | `src/renderer/src/components/FilterChip.tsx` | Individual filter chip: toggle on/off, remove. Visual states for disabled and invalid regex. |
+| `LaneAddInput` | `src/renderer/src/components/LaneAddInput.tsx` | Ad-hoc lane regex input. New lane inserted before unmatched, triggers reclassification. |
 | `UnparseablePanel` | `src/renderer/src/components/UnparseablePanel.tsx` | Bottom panel for entries with failed timestamp parse. |
 
 ## Components / Architecture
@@ -424,6 +431,14 @@ $HOME/.config/log-swim-ui/config.json
 | `applyConfigToCSS` now accepts `AppConfig` directly | Removed 3 duplicate type interfaces that were Phase 02 stubs | DRY fix: `ConfigColors`/`ConfigUI`/`PartialConfig` were structural duplicates of `AppConfig` sub-types. |
 | `@tanstack/react-virtual` added as dependency | New production dependency | Required for virtualizing potentially 20K+ log rows in SwimLaneGrid. |
 | `DesignReferencePage` preserved but not rendered by `App.tsx` | Dev-only reference page kept for design system reference | `App.tsx` now renders the real app shell; the reference page remains available for manual import during design work. |
+
+### Phase 06: UI -- Filters, Drag & Lane Management
+
+| WHAT | WHY-ItsCalledOut | WHY-ItWasDone |
+|------|-----------------|---------------|
+| `E2E_TEST=1` env seam in `main/index.ts` | Modifies production code for testability (4 conditional checks, ~25 lines) | Electron E2E requires testability seam; enables 11 E2E tests covering core flows without stdin piping complexity |
+| `IpcLogLine` type duplicated in `tests/e2e/helpers` | DRY violation -- same interface exists in `src/core/types.ts` | E2E tests run outside Vite/TS alias context; importing `@core` paths requires complex tsconfig changes disproportionate to the 4-field interface |
+| `lanesRef` pattern in `useLogIngestion` | Non-standard React pattern (ref instead of state in deps) | Prevents IPC listener teardown on lane changes; standard React escape hatch for stable callbacks accessing mutable state |
 
 ## Open Questions
 - None — all requirements confirmed.
