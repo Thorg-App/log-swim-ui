@@ -4,6 +4,9 @@
     "src/renderer/src/**/*",
     "src/core/**/*"
   ],
+  "exclude": [
+    "src/core/stdin-reader.ts"
+  ],
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
