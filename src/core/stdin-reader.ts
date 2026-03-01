@@ -7,6 +7,11 @@ interface StdinReaderCallbacks {
   readonly onError: (error: Error) => void
 }
 
+interface StdinReaderHandle {
+  /** Close the readline interface, stopping further line processing. */
+  readonly stop: () => void
+}
+
 /**
  * Line-by-line reader for a Readable stream.
  * Uses node:readline for line splitting.
@@ -19,8 +24,11 @@ class StdinReader {
    * Start reading lines from the given readable stream.
    * Calls onLine for each line, onEnd when the stream closes,
    * and onError if the stream encounters an error.
+   *
+   * Returns a handle with a stop() method to close the readline interface
+   * and halt further line processing.
    */
-  static start(input: Readable, callbacks: StdinReaderCallbacks): void {
+  static start(input: Readable, callbacks: StdinReaderCallbacks): StdinReaderHandle {
     const rl = createInterface({ input })
 
     rl.on('line', (line: string) => {
@@ -38,8 +46,10 @@ class StdinReader {
     rl.on('error', (error: Error) => {
       callbacks.onError(error)
     })
+
+    return { stop: () => rl.close() }
   }
 }
 
 export { StdinReader }
-export type { StdinReaderCallbacks }
+export type { StdinReaderCallbacks, StdinReaderHandle }

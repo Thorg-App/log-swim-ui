@@ -1,0 +1,65 @@
+# Phase 04: Electron Shell & CLI -- Implementation Summary
+
+## Status: COMPLETE
+
+All items implemented, all tests green, typecheck clean.
+
+## Results
+
+- **10 test files, 132 tests passing** (57 new tests added: 33 CLI parser + 24 config manager)
+- **TypeScript typecheck clean** (both `tsconfig.node.json` and `tsconfig.web.json`)
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/main/cli-parser.ts` | CLI argument parser: `--key-level`, `--key-timestamp`, `--lanes` |
+| `src/main/config-manager.ts` | Config file loading, validation, deep merge, and saving |
+| `src/main/ipc-bridge.ts` | Stdin -> JsonParser -> TimestampDetector -> IPC send pipeline |
+| `src/preload/electron-api.d.ts` | TypeScript declaration for `window.api` |
+| `tests/unit/main/cli-parser.test.ts` | 33 BDD tests for CLI parser |
+| `tests/unit/main/config-manager.test.ts` | 24 BDD tests for config manager |
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/core/types.ts` | Added `IpcLogLine`, `IPC_CHANNELS`, `ElectronApi`, `CliArgsResult` |
+| `src/core/stdin-reader.ts` | Added `StdinReaderHandle` return type with `stop()` method |
+| `src/preload/index.ts` | Full `contextBridge` API implementation with whitelisted channels |
+| `src/main/index.ts` | Full startup orchestration: TTY check, CLI parse, config load, IPC handlers, bridge start |
+| `tsconfig.web.json` | Added `src/preload/electron-api.d.ts` to include |
+| `bin/log-swim-ui.js` | Updated from stub to spawn Electron with args and stdin forwarding |
+
+## Design Decisions & Deviations
+
+### D1: Adopted SO-01 -- Collapsed CLI arg channels into single `get-cli-args`
+Per review suggestion SO-01, collapsed `get-lane-patterns`, `get-key-level`, `get-key-timestamp` into a single `get-cli-args` IPC channel returning `CliArgsResult { keyLevel, keyTimestamp, lanePatterns }`. Reduces channel count from 9 to 7, fewer handlers and preload methods.
+
+### D2: MC-01 incorporated -- First-line errors HALT ingestion
+Per review MC-01, the IPC bridge halts stdin reading when the first line fails JSON parse or timestamp detection. Implementation:
+- Added `StdinReaderHandle.stop()` to `StdinReader` (backward-compatible extension)
+- `IpcBridge.haltIngestion()` calls `handle.stop()` to close readline interface
+- Error message sent to renderer via `stream-error` channel before halting
+
+### D3: MC-02 incorporated -- `bin/log-swim-ui.js` updated
+Updated from stub to functional CLI entry point that:
+- Resolves `electron` binary path via `require('electron')`
+- Spawns Electron with app path + forwarded CLI args
+- Pipes parent stdin to child process stdin
+- Inherits stdout/stderr for terminal output
+
+### D4: TF-05 incorporated -- Relative imports in tests
+Used relative imports (`../../../src/main/...`) in test files instead of adding an `@main` path alias. Simpler for just 2 test files.
+
+### D5: MI-05 incorporated -- Test for `--lanes` at end with no values
+Added explicit test case for `--lanes` being the last arg with no values after it.
+
+### D6: Duplicate flags throw errors (strict behavior)
+When `--key-level`, `--key-timestamp`, or `--lanes` appears twice, `CliValidationError` is thrown. Rationale: likely a user mistake.
+
+### D7: ConfigManager -- validation before merge
+Validation runs on the raw loaded JSON before deep merge. If validation fails, defaults are returned as fallback. This ensures the app always runs even with a corrupted config file.
+
+### D8: StdinReader backward-compatible extension
+`StdinReader.start()` return type changed from `void` to `StdinReaderHandle`. Existing callers that ignore the return value continue to work. All 6 existing stdin-reader tests pass unchanged.
