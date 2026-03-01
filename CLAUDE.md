@@ -195,7 +195,7 @@ describe('GIVEN a log entry with level "error"', () => {
 ```
 src/
   main/          # Electron main process (Node.js context)
-                 # - index.ts: App startup orchestration (TTY check, CLI parse, config load, IPC handlers, bridge start, E2E test seam)
+                 # - index.ts: App startup orchestration (TTY check, CLI parse, config load, IPC handlers, RENDERER_READY handshake, bridge start, E2E test seam)
                  # - cli-parser.ts: CliParser (static) -- parse --key-level, --key-timestamp, --lanes
                  # - config-manager.ts: ConfigManager (static) -- load/validate/merge/save/reset config, ConfigValidator (static)
                  # - ipc-bridge.ts: IpcBridge -- stdin → JsonParser → TimestampDetector → IPC send pipeline
@@ -209,7 +209,7 @@ src/
                  # - ErrorScreen.tsx: Full-screen error display with config revert action
                  # - DesignReferencePage.tsx: Dev-only design system reference (not rendered by App.tsx)
                  # - useAppInit.ts: Init hook -- load config, CLI args, create MasterList, apply CSS tokens
-                 # - useLogIngestion.ts: IPC wiring + log state (version, stream state, unparseable, view mode); accepts lanesRef + configRef for stable IPC callbacks
+                 # - useLogIngestion.ts: IPC wiring + log state (version, stream state, unparseable, view mode); accepts lanesRef + configRef for stable IPC callbacks; signals RENDERER_READY after all listeners registered
                  # - timestamp-formatter.ts: Format timestamps (iso, local, relative)
                  # - ipc-converters.ts: Convert IPC types (IpcLogLine) to renderer types (LogEntry)
                  # - log-row-utils.ts: Pure display utilities for LogRow (CSS class, message preview, grid column)
@@ -232,7 +232,7 @@ src/
                  # - design-reference.css: Dev-only styles for DesignReferencePage
     index.html   # HTML entry point
   core/          # Shared pure logic (no Electron or React imports)
-                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS (incl. RESET_CONFIG), ElectronApi (incl. resetConfig), CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType, CONFIG_CONSTRAINTS, createLaneDefinition
+                 # - types.ts: LogEntry, LaneDefinition, AppConfig, ParsedLine, IpcLogLine, IPC_CHANNELS (incl. RESET_CONFIG, RENDERER_READY), ElectronApi (incl. resetConfig, signalReady), CliArgsResult, KNOWN_LOG_LEVELS, ViewMode, AppErrorType, CONFIG_CONSTRAINTS, createLaneDefinition
                  # - config-validation.ts: Pure validation helpers for config fields (isValidHexColor, isInRange, HEX_COLOR_PATTERN)
                  # - filter.ts: FilterEngine (static) -- create/toggle/match filters; Filter discriminated union (FieldFilter | RawFilter)
                  # - json-parser.ts: JsonParser (static) -- raw string → ParsedLine
