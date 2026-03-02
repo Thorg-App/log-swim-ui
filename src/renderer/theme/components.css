@@ -132,7 +132,7 @@ body {
   border-bottom: var(--border-width) solid var(--color-border);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   gap: var(--space-2);
 }
 
