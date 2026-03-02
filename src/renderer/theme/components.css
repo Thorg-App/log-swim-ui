@@ -170,13 +170,13 @@ body {
   visibility: hidden;
 }
 
-/* Draggable handle cursor states */
-.lane-header__drag-handle[draggable="true"] {
+/* Draggable header cursor states */
+.lane-header[draggable="true"] {
   cursor: grab;
   user-select: none;
 }
 
-.lane-header__drag-handle[draggable="true"]:active {
+.lane-header[draggable="true"]:active {
   cursor: grabbing;
 }
 

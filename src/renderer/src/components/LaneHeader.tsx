@@ -27,8 +27,8 @@ interface LaneHeaderProps {
  * - x remove button to delete the lane
  * - Aa/aa toggle to switch case sensitivity
  *
- * Drag-and-drop: the drag handle span is the drag initiator (draggable).
- * The container div is the drop target (onDragOver / onDrop).
+ * Drag-and-drop: the entire header div is the drag initiator AND drop target.
+ * The ⠿ icon is a visual affordance hint only (not the drag handle).
  * "Unmatched" lane is never draggable and never a drop target.
  */
 function LaneHeader({
@@ -102,7 +102,7 @@ function LaneHeader({
   const displayText = isUnmatched ? 'unmatched' : pattern
   const isDraggable = !isUnmatched
 
-  function handleDragStart(e: DragEvent<HTMLSpanElement>): void {
+  function handleDragStart(e: DragEvent<HTMLDivElement>): void {
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(laneIndex))
     onDragStart?.(laneIndex)
@@ -126,17 +126,17 @@ function LaneHeader({
   return (
     <div
       className={classNames.join(' ')}
+      draggable={isDraggable && !isEditing ? true : undefined}
+      onDragStart={isDraggable && !isEditing ? handleDragStart : undefined}
+      onDragEnd={isDraggable && !isEditing ? handleDragEnd : undefined}
       onDragOver={isDraggable ? handleDragOver : undefined}
       onDrop={isDraggable ? handleDrop : undefined}
     >
-      {/* Drag handle -- draggable on the handle span */}
+      {/* Drag handle icon -- visual affordance hint only, not the drag initiator */}
       {isDraggable ? (
         <span
           className="lane-header__drag-handle"
           aria-hidden="true"
-          draggable="true"
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
         >
           ⠿
         </span>
