@@ -4,6 +4,7 @@ node_modules/
 # Build output
 out/
 dist/
+dist-ssr/
 
 # Temp files
 .tmp/
@@ -21,6 +22,7 @@ Thumbs.db
 # Test output
 test-results/
 playwright-report/
+coverage/
 
 # Environment
 .env
@@ -31,9 +33,19 @@ playwright-report/
 
 # Logs
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Electron
 *.asar
 
 # Output directory
 .out/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+vite.config.*.timestamp-*
