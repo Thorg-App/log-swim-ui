@@ -1,11 +1,11 @@
 ---
 id: hvhuhemsr252gdrim2qttq1ch
 title: "expanding the log line does not render right"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-01T14:37:26Z
-status_updated_iso: 2026-03-01T14:37:26Z
+status_updated_iso: 2026-03-02T19:49:12Z
 type: task
 priority: 0
 assignee: nickolaykondratyev
