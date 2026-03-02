@@ -116,7 +116,7 @@ describe('DEFAULT_APP_CONFIG', () => {
     })
 
     it('THEN has a dark background color', () => {
-      expect(DEFAULT_APP_CONFIG.colors.background).toBe('#212529')
+      expect(DEFAULT_APP_CONFIG.colors.background).toBe('#0F172A')
     })
 
     it('THEN has level colors for standard log levels', () => {

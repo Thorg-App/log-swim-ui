@@ -161,18 +161,18 @@ interface AppConfig {
 const DEFAULT_APP_CONFIG: AppConfig = {
   colors: {
     levels: {
-      trace: '#6c757d',
-      debug: '#0dcaf0',
-      info: '#198754',
-      warn: '#ffc107',
-      error: '#dc3545',
-      fatal: '#6f42c1'
+      trace: '#6B7280',
+      debug: '#94A3B8',
+      info: '#3B82F6',
+      warn: '#F59E0B',
+      error: '#EF4444',
+      fatal: '#A855F7'
     },
-    unrecognizedLevel: '#adb5bd',
-    swimlaneHeaders: '#495057',
-    background: '#212529',
-    rowHover: '#2c3034',
-    expandedRow: '#343a40'
+    unrecognizedLevel: '#F97316',
+    swimlaneHeaders: '#1E293B',
+    background: '#0F172A',
+    rowHover: '#1E293B',
+    expandedRow: '#334155'
   },
   ui: {
     rowHeight: 28,
