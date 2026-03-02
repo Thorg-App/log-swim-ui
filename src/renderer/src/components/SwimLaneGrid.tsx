@@ -204,13 +204,14 @@ function SwimLaneGrid({
             return (
               <div
                 key={masterIndex}
-                // WHY inline style: @tanstack/virtual requires absolute positioning for virtual rows
+                // WHY inline style: @tanstack/virtual requires absolute positioning for virtual rows.
+                // WHY no height: the wrapper must grow to content so measureElement's ResizeObserver
+                // can report the actual expanded height back to the virtualizer.
                 style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   width: '100%',
-                  height: virtualRow.size,
                   transform: `translateY(${virtualRow.start}px)`
                 }}
                 ref={virtualizer.measureElement}
