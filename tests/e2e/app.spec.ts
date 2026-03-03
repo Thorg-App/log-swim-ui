@@ -103,12 +103,38 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
       await firstRow.click()
       await expect(page.locator('.log-row__expanded-content')).toHaveCount(1)
 
-      // Collapse by dispatching click on the expanded row
-      // WHY: In virtualized layout with absolute-positioned rows, Playwright's actionability
-      // check detects overlapping log-row-grid elements. We dispatch the click event directly.
-      await page.locator('.log-row--expanded').dispatchEvent('click')
+      // Collapse by clicking the expanded row directly
+      await page.locator('.log-row--expanded').click()
 
       await expect(page.locator('.log-row__expanded-content')).toHaveCount(0)
+    })
+
+    test('THEN expanding a row pushes subsequent rows down without overlaying them', async () => {
+      // GIVEN collapsed first row
+      const firstRow = page.locator('.log-row').first()
+      const collapsedBox = await firstRow.boundingBox()
+      expect(collapsedBox).not.toBeNull()
+
+      // WHEN expanding
+      await firstRow.click()
+      await expect(page.locator('.log-row__expanded-content')).toBeVisible()
+
+      // THEN expanded row is taller
+      const expandedBox = await page.locator('.log-row--expanded').boundingBox()
+      expect(expandedBox).not.toBeNull()
+      expect(expandedBox!.height).toBeGreaterThan(collapsedBox!.height)
+
+      // THEN subsequent row is below (not overlaid).
+      // WHY expect.poll: the virtualizer recalculates translateY for subsequent rows
+      // asynchronously via ResizeObserver after the expanded height is measured.
+      // We poll until the second row has settled at its new position.
+      // WHY Math.floor: bounding boxes include sub-pixel values (e.g. 311.25) but the
+      // browser rounds translateY to whole pixels, so we compare at integer granularity.
+      const expandedBottom = Math.floor(expandedBox!.y + expandedBox!.height)
+      await expect.poll(async () => {
+        const box = await page.locator('.log-row').nth(1).boundingBox()
+        return box !== null ? Math.floor(box.y) : 0
+      }).toBeGreaterThanOrEqual(expandedBottom)
     })
   })
 
