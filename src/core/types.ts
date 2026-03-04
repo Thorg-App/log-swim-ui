@@ -36,11 +36,11 @@ interface LaneDefinition {
   readonly pattern: string // original regex string from CLI/UI
   readonly regex: RegExp | null // null if pattern failed to compile
   readonly isError: boolean // true if regex compilation failed
-  readonly caseSensitive: boolean // true = default (no flags), false = 'i' flag
+  readonly caseSensitive: boolean // false = default ('i' flag), true = no flags
 }
 
 interface CreateLaneDefinitionOptions {
-  readonly caseSensitive?: boolean // default: true (backward compatible)
+  readonly caseSensitive?: boolean // default: false (case-insensitive by default)
 }
 
 /**
@@ -51,7 +51,7 @@ interface CreateLaneDefinitionOptions {
  * When `caseSensitive` is false, the regex is compiled with the 'i' flag.
  */
 function createLaneDefinition(pattern: string, options?: CreateLaneDefinitionOptions): LaneDefinition {
-  const caseSensitive = options?.caseSensitive ?? true
+  const caseSensitive = options?.caseSensitive ?? false
   const flags = caseSensitive ? '' : 'i'
   try {
     const regex = new RegExp(pattern, flags)
