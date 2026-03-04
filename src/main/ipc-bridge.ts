@@ -6,6 +6,15 @@ import type { StdinReaderHandle } from '../core/stdin-reader'
 import { JsonParser } from '../core/json-parser'
 import { TimestampDetector } from '../core/timestamp-detector'
 
+// --- Line Filtering Constants ---
+
+/**
+ * Regex pattern for tail -F separator lines.
+ * Format: "==> filename <==" where filename is non-empty.
+ * Example: "==> /var/log/app.log <=="
+ */
+const TAIL_SEPARATOR_PATTERN = /^==> .+ <==$/
+
 // --- IPC Sender Abstraction ---
 
 /**
@@ -48,6 +57,25 @@ class IpcBridge {
   }
 
   /**
+   * Filter out non-JSON lines that should be ignored.
+   * - tail -F separator lines: "==> filename <=="
+   * - Empty lines (after trimming whitespace)
+   */
+  private static shouldIgnoreLine(line: string): boolean {
+    // Empty line check (after trimming whitespace)
+    if (line.trim().length === 0) {
+      return true
+    }
+
+    // tail -F separator pattern: "==> filename <=="
+    if (TAIL_SEPARATOR_PATTERN.test(line)) {
+      return true
+    }
+
+    return false
+  }
+
+  /**
    * Start reading from the input stream.
    * Wires StdinReader callbacks to the processing pipeline.
    */
@@ -60,6 +88,11 @@ class IpcBridge {
   }
 
   private handleLine(line: string): void {
+    // Filter out tail -F separators and empty lines
+    if (IpcBridge.shouldIgnoreLine(line)) {
+      return
+    }
+
     const parsed = JsonParser.parse(line)
 
     if (!parsed.ok) {
