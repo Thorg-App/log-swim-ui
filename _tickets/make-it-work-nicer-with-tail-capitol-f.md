@@ -1,11 +1,11 @@
 ---
 id: d60cv5pzkinjq13rpk9jxwrrs
 title: "make it work nicer with tail capitol F"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-01T14:32:49Z
-status_updated_iso: 2026-03-01T14:32:49Z
+status_updated_iso: 2026-03-04T18:12:23Z
 type: task
 priority: 0
 assignee: nickolaykondratyev
