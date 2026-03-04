@@ -99,6 +99,28 @@ body {
 .log-row--critical { border-left-color: var(--color-level-critical); }
 .log-row--unrecognized { border-left-color: var(--color-level-unrecognized); }
 
+/* Level badge: fixed-width, right-aligned, colored by level */
+.log-row__level {
+  flex-shrink: 0;
+  width: 8ch;
+  text-align: right;
+  margin-right: var(--space-2);
+  text-transform: uppercase;
+  font-weight: var(--weight-semibold);
+}
+
+/* Level-specific text colors */
+.log-row__level--trace     { color: var(--color-level-trace); }
+.log-row__level--debug     { color: var(--color-level-debug); }
+.log-row__level--info      { color: var(--color-level-info); }
+.log-row__level--notice    { color: var(--color-level-notice); }
+.log-row__level--warn      { color: var(--color-level-warn); }
+.log-row__level--warning   { color: var(--color-level-warning); }
+.log-row__level--error     { color: var(--color-level-error); }
+.log-row__level--fatal     { color: var(--color-level-fatal); }
+.log-row__level--critical  { color: var(--color-level-critical); }
+.log-row__level--unrecognized { color: var(--color-level-unrecognized); }
+
 .log-row__timestamp {
   flex-shrink: 0;
   color: var(--color-text-secondary);

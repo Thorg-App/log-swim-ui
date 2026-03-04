@@ -7,19 +7,35 @@ const KNOWN_LOG_LEVELS_SET: ReadonlySet<string> = new Set(KNOWN_LOG_LEVELS)
 
 const DEFAULT_MESSAGE_MAX_LENGTH = 200
 
+// --- Internal Helpers ---
+
+/**
+ * Normalizes a log level string for CSS class matching.
+ * Returns the lowercase level if known, otherwise 'unrecognized'.
+ */
+function normalizeLevel(level: string): string {
+  const normalized = level.toLowerCase()
+  return KNOWN_LOG_LEVELS_SET.has(normalized) ? normalized : 'unrecognized'
+}
+
+// --- Public Helpers ---
+
 /**
  * Returns the CSS class for a log level's left-border color.
  * Known levels map to `.log-row--{level}`.
  * Unknown levels map to `.log-row--unrecognized`.
- *
- * Input is lowercased before matching.
  */
 function getLevelCssClass(level: string): string {
-  const normalized = level.toLowerCase()
-  if (KNOWN_LOG_LEVELS_SET.has(normalized)) {
-    return `log-row--${normalized}`
-  }
-  return 'log-row--unrecognized'
+  return `log-row--${normalizeLevel(level)}`
+}
+
+/**
+ * Returns the CSS class for a log level's text color.
+ * Known levels map to `.log-row__level--{level}`.
+ * Unknown levels map to `.log-row__level--unrecognized`.
+ */
+function getLevelTextCssClass(level: string): string {
+  return `log-row__level--${normalizeLevel(level)}`
 }
 
 /**
@@ -68,4 +84,4 @@ function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength) + '\u2026' // Unicode ellipsis
 }
 
-export { getLevelCssClass, getMessagePreview, getGridColumn, getTotalLaneCount }
+export { getLevelCssClass, getLevelTextCssClass, getMessagePreview, getGridColumn, getTotalLaneCount }
