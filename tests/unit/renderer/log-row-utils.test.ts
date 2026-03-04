@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   getLevelCssClass,
+  getLevelTextCssClass,
   getMessagePreview,
   getGridColumn,
   getTotalLaneCount
@@ -81,6 +82,68 @@ describe('getLevelCssClass', () => {
     describe('WHEN level is "unknown"', () => {
       it('THEN returns "log-row--unrecognized"', () => {
         expect(getLevelCssClass('unknown')).toBe('log-row--unrecognized')
+      })
+    })
+  })
+})
+
+// --- getLevelTextCssClass ---
+
+describe('getLevelTextCssClass', () => {
+  describe('GIVEN a known log level', () => {
+    const knownLevels = [
+      'trace',
+      'debug',
+      'info',
+      'notice',
+      'warn',
+      'warning',
+      'error',
+      'fatal',
+      'critical'
+    ]
+
+    for (const level of knownLevels) {
+      describe(`WHEN level is "${level}"`, () => {
+        it(`THEN returns "log-row__level--${level}"`, () => {
+          expect(getLevelTextCssClass(level)).toBe(`log-row__level--${level}`)
+        })
+      })
+    }
+  })
+
+  describe('GIVEN an uppercase known level', () => {
+    describe('WHEN level is "ERROR"', () => {
+      it('THEN normalizes to lowercase and returns "log-row__level--error"', () => {
+        expect(getLevelTextCssClass('ERROR')).toBe('log-row__level--error')
+      })
+    })
+  })
+
+  describe('GIVEN a mixed-case known level', () => {
+    describe('WHEN level is "Fatal"', () => {
+      it('THEN normalizes to lowercase and returns "log-row__level--fatal"', () => {
+        expect(getLevelTextCssClass('Fatal')).toBe('log-row__level--fatal')
+      })
+    })
+  })
+
+  describe('GIVEN an unknown log level', () => {
+    describe('WHEN level is "custom"', () => {
+      it('THEN returns "log-row__level--unrecognized"', () => {
+        expect(getLevelTextCssClass('custom')).toBe('log-row__level--unrecognized')
+      })
+    })
+
+    describe('WHEN level is empty string', () => {
+      it('THEN returns "log-row__level--unrecognized"', () => {
+        expect(getLevelTextCssClass('')).toBe('log-row__level--unrecognized')
+      })
+    })
+
+    describe('WHEN level is "unknown"', () => {
+      it('THEN returns "log-row__level--unrecognized"', () => {
+        expect(getLevelTextCssClass('unknown')).toBe('log-row__level--unrecognized')
       })
     })
   })

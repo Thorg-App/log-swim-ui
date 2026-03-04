@@ -1,6 +1,6 @@
 import type { LogEntry, ViewTimestampFormat } from '@core/types'
 import { formatTimestamp } from '../timestamp-formatter'
-import { getLevelCssClass, getMessagePreview, getGridColumn } from '../log-row-utils'
+import { getLevelCssClass, getLevelTextCssClass, getMessagePreview, getGridColumn } from '../log-row-utils'
 
 interface LogRowProps {
   readonly entry: LogEntry
@@ -25,6 +25,7 @@ function LogRow({
   laneCount
 }: LogRowProps) {
   const levelClass = getLevelCssClass(entry.level)
+  const levelTextClass = getLevelTextCssClass(entry.level)
   const formattedTimestamp = formatTimestamp(entry.timestamp, timestampFormat, firstTimestamp)
   const messagePreview = getMessagePreview(entry)
 
@@ -45,6 +46,9 @@ function LogRow({
         style={{ gridColumn: getGridColumn(entry.laneIndex) }}
         onClick={onToggleExpand}
       >
+        <span className={`log-row__level ${levelTextClass}`}>
+          {entry.level.toUpperCase()}
+        </span>
         <span className="log-row__timestamp">{formattedTimestamp}</span>
         {isExpanded ? (
           <div className="log-row__expanded-content">
