@@ -34,14 +34,14 @@ describe('createLaneDefinition', () => {
 
   describe('GIVEN no caseSensitive option', () => {
     describe('WHEN createLaneDefinition is called', () => {
-      it('THEN defaults caseSensitive to true', () => {
+      it('THEN defaults caseSensitive to false', () => {
         const lane = createLaneDefinition('error')
-        expect(lane.caseSensitive).toBe(true)
+        expect(lane.caseSensitive).toBe(false)
       })
 
-      it('THEN compiles regex without flags', () => {
+      it('THEN compiles regex with "i" flag', () => {
         const lane = createLaneDefinition('error')
-        expect(lane.regex?.flags).toBe('')
+        expect(lane.regex?.flags).toBe('i')
       })
     })
   })

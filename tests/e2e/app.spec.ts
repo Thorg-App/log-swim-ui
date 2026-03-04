@@ -301,28 +301,28 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
   })
 
   test.describe('WHEN the case sensitivity toggle is clicked on a lane header', () => {
-    test('THEN the toggle text changes from Aa to aa', async () => {
-      // Initially case sensitive (Aa)
+    test('THEN the toggle text changes from aa to Aa', async () => {
+      // Initially case insensitive (aa) - the new default
       const caseToggle = page.locator('[data-testid="lane-header-case-toggle"]').first()
-      await expect(caseToggle).toHaveText('Aa')
+      await expect(caseToggle).toHaveText('aa')
 
-      // Click to toggle to case insensitive
+      // Click to toggle to case sensitive
       await caseToggle.click()
 
-      // Should now show "aa"
-      await expect(caseToggle).toHaveText('aa')
+      // Should now show "Aa"
+      await expect(caseToggle).toHaveText('Aa')
     })
 
-    test('THEN clicking again reverts to case sensitive (Aa)', async () => {
+    test('THEN clicking again reverts to case insensitive (aa)', async () => {
       const caseToggle = page.locator('[data-testid="lane-header-case-toggle"]').first()
 
-      // Toggle to case insensitive
-      await caseToggle.click()
-      await expect(caseToggle).toHaveText('aa')
-
-      // Toggle back to case sensitive
+      // Toggle to case sensitive
       await caseToggle.click()
       await expect(caseToggle).toHaveText('Aa')
+
+      // Toggle back to case insensitive
+      await caseToggle.click()
+      await expect(caseToggle).toHaveText('aa')
     })
   })
 
