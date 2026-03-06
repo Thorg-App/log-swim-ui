@@ -32,15 +32,40 @@ interface LogEntry {
 
 // --- LaneDefinition ---
 
+/**
+ * A single extra classification pattern entry within a lane.
+ * Case sensitivity is inherited from the parent lane (no per-pattern flag).
+ */
+interface ExtraPatternEntry {
+  readonly pattern: string
+  readonly regex: RegExp | null // null if pattern failed to compile
+  readonly isError: boolean // true if regex compilation failed
+}
+
 interface LaneDefinition {
   readonly pattern: string // original regex string from CLI/UI
   readonly regex: RegExp | null // null if pattern failed to compile
   readonly isError: boolean // true if regex compilation failed
   readonly caseSensitive: boolean // false = default ('i' flag), true = no flags
+  readonly extraPatterns: readonly ExtraPatternEntry[] // additional OR-matched patterns
 }
 
 interface CreateLaneDefinitionOptions {
   readonly caseSensitive?: boolean // default: false (case-insensitive by default)
+}
+
+/**
+ * Internal helper: compile a single extra pattern entry with the given case sensitivity flag.
+ * Not exported — used only by addExtraPatternToLane and rebuildLaneDefinition.
+ */
+function compileExtraPattern(pattern: string, caseSensitive: boolean): ExtraPatternEntry {
+  const flags = caseSensitive ? '' : 'i'
+  try {
+    const regex = new RegExp(pattern, flags)
+    return { pattern, regex, isError: false }
+  } catch {
+    return { pattern, regex: null, isError: true }
+  }
 }
 
 /**
@@ -49,16 +74,55 @@ interface CreateLaneDefinitionOptions {
  * returns `{ pattern, regex: null, isError: true, caseSensitive }`.
  *
  * When `caseSensitive` is false, the regex is compiled with the 'i' flag.
+ * Always initializes `extraPatterns` to an empty array.
  */
 function createLaneDefinition(pattern: string, options?: CreateLaneDefinitionOptions): LaneDefinition {
   const caseSensitive = options?.caseSensitive ?? false
   const flags = caseSensitive ? '' : 'i'
   try {
     const regex = new RegExp(pattern, flags)
-    return { pattern, regex, isError: false, caseSensitive }
+    return { pattern, regex, isError: false, caseSensitive, extraPatterns: [] }
   } catch {
-    return { pattern, regex: null, isError: true, caseSensitive }
+    return { pattern, regex: null, isError: true, caseSensitive, extraPatterns: [] }
   }
+}
+
+/**
+ * Pure factory: add an extra classification pattern to a lane (OR logic).
+ * Returns a new LaneDefinition with the pattern appended to extraPatterns.
+ * Does NOT mutate the original lane.
+ */
+function addExtraPatternToLane(lane: LaneDefinition, pattern: string): LaneDefinition {
+  const entry = compileExtraPattern(pattern, lane.caseSensitive)
+  return { ...lane, extraPatterns: [...lane.extraPatterns, entry] }
+}
+
+/**
+ * Pure factory: remove an extra pattern by index from a lane.
+ * Returns a new LaneDefinition with the specified entry removed.
+ * Does NOT mutate the original lane.
+ */
+function removeExtraPatternFromLane(lane: LaneDefinition, index: number): LaneDefinition {
+  const newExtras = lane.extraPatterns.filter((_, i) => i !== index)
+  return { ...lane, extraPatterns: newExtras }
+}
+
+/**
+ * Pure factory: rebuild a LaneDefinition with a new primary pattern and/or new caseSensitive flag.
+ * Recompiles the primary regex and all existing extraPatterns with the new flag.
+ * Preserves all extra patterns — use this instead of createLaneDefinition() when editing
+ * an existing lane to avoid losing extra patterns.
+ */
+function rebuildLaneDefinition(
+  newPrimaryPattern: string,
+  existingLane: LaneDefinition,
+  caseSensitive: boolean
+): LaneDefinition {
+  const base = createLaneDefinition(newPrimaryPattern, { caseSensitive })
+  const rebuiltExtras = existingLane.extraPatterns.map((ep) =>
+    compileExtraPattern(ep.pattern, caseSensitive)
+  )
+  return { ...base, extraPatterns: rebuiltExtras }
 }
 
 // --- Parsed Line (JSON parsing result) ---
@@ -236,6 +300,7 @@ export type {
   TimestampFormat,
   ViewTimestampFormat,
   LogEntry,
+  ExtraPatternEntry,
   LaneDefinition,
   CreateLaneDefinitionOptions,
   JsonParseSuccess,
@@ -262,5 +327,8 @@ export {
   DEFAULT_APP_CONFIG,
   CONFIG_CONSTRAINTS,
   KNOWN_LOG_LEVELS,
-  createLaneDefinition
+  createLaneDefinition,
+  addExtraPatternToLane,
+  removeExtraPatternFromLane,
+  rebuildLaneDefinition
 }

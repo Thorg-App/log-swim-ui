@@ -372,4 +372,183 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
       await expect(page.locator('[data-testid="settings-backdrop"]')).toHaveCount(0)
     })
   })
+
+  test.describe('WHEN the extra pattern feature is used on a lane header', () => {
+    test.beforeEach(async () => {
+      await injectLogLines(electronApp, SAMPLE_LOG_LINES)
+      await waitForFlush(page)
+    })
+
+    test('THEN the "+ Pattern" button is visible on each non-unmatched lane header', async () => {
+      const addPatternBtns = page.locator('[data-testid="lane-header-add-pattern-btn"]')
+      // With --lanes error auth, there are 2 non-unmatched lanes
+      await expect(addPatternBtns).toHaveCount(2)
+    })
+
+    test('THEN the unmatched lane header does not have a "+ Pattern" button', async () => {
+      const unmatchedHeader = page.locator('.lane-header--unmatched')
+      const addBtn = unmatchedHeader.locator('[data-testid="lane-header-add-pattern-btn"]')
+      await expect(addBtn).toHaveCount(0)
+    })
+
+    test('THEN clicking "+ Pattern" shows an inline input', async () => {
+      const firstAddBtn = page.locator('[data-testid="lane-header-add-pattern-btn"]').first()
+      await firstAddBtn.click()
+
+      const addInput = page.locator('[data-testid="lane-header-add-pattern-input"]')
+      await expect(addInput).toHaveCount(1)
+    })
+
+    test('THEN typing a pattern and pressing Enter adds a chip to the lane header', async () => {
+      const firstAddBtn = page.locator('[data-testid="lane-header-add-pattern-btn"]').first()
+      await firstAddBtn.click()
+
+      const addInput = page.locator('[data-testid="lane-header-add-pattern-input"]')
+      await addInput.fill('fatal')
+      await addInput.press('Enter')
+
+      // Input should be gone
+      await expect(page.locator('[data-testid="lane-header-add-pattern-input"]')).toHaveCount(0)
+
+      // Chip should appear
+      const chips = page.locator('[data-testid="lane-header-extra-chip"]')
+      await expect(chips).toHaveCount(1)
+      await expect(chips.first()).toContainText('fatal')
+    })
+
+    test('THEN pressing Escape on the add-pattern input cancels without adding a chip', async () => {
+      const firstAddBtn = page.locator('[data-testid="lane-header-add-pattern-btn"]').first()
+      await firstAddBtn.click()
+
+      const addInput = page.locator('[data-testid="lane-header-add-pattern-input"]')
+      await addInput.fill('should-not-appear')
+      await addInput.press('Escape')
+
+      // Input should be gone
+      await expect(page.locator('[data-testid="lane-header-add-pattern-input"]')).toHaveCount(0)
+
+      // No chip should have been added
+      await expect(page.locator('[data-testid="lane-header-extra-chip"]')).toHaveCount(0)
+    })
+
+    test('THEN clicking × on an extra pattern chip removes it', async () => {
+      // Add a chip first
+      const firstAddBtn = page.locator('[data-testid="lane-header-add-pattern-btn"]').first()
+      await firstAddBtn.click()
+      const addInput = page.locator('[data-testid="lane-header-add-pattern-input"]')
+      await addInput.fill('fatal')
+      await addInput.press('Enter')
+      await expect(page.locator('[data-testid="lane-header-extra-chip"]')).toHaveCount(1)
+
+      // Click the remove button
+      const removeBtn = page.locator('[data-testid="lane-header-extra-chip-remove"]').first()
+      await removeBtn.click()
+
+      // Chip should be gone
+      await expect(page.locator('[data-testid="lane-header-extra-chip"]')).toHaveCount(0)
+    })
+  })
+})
+
+// --- Extra Pattern OR Logic E2E Tests ---
+// Uses a single-lane setup to directly verify OR classification routing.
+
+test.describe('GIVEN the Electron app launched with --lanes "error" (single lane)', () => {
+  let electronApp: ElectronApplication
+  let page: Page
+
+  const SINGLE_LANE_CLI_ARGS = [
+    '--key-level', 'level',
+    '--key-timestamp', 'timestamp',
+    '--lanes', 'error'
+  ]
+
+  test.beforeEach(async () => {
+    const app = await launchApp(SINGLE_LANE_CLI_ARGS)
+    electronApp = app.electronApp
+    page = app.page
+  })
+
+  test.afterEach(async () => {
+    await electronApp.close()
+  })
+
+  test.describe('WHEN a warn-only log line is injected and "warn" is added as an extra pattern to the error lane', () => {
+    // WHY style selector: LogRow sets `style={{ gridColumn: laneIndex + 1 }}` (inline).
+    // Error lane is laneIndex 0 → grid-column: 1. Unmatched lane is laneIndex 1 → grid-column: 2.
+    // Selecting by style substring pins the assertion to the specific lane column, not the whole grid.
+    const ERROR_LANE_SELECTOR = '.log-row[style*="grid-column: 1;"]'
+
+    test('THEN the warn entry appears in the error lane after the extra pattern is added', async () => {
+      // Inject a warn-only log line (does not match "error" primary pattern)
+      const warnLine = createIpcLogLine('warn', 'warn-only-message', '2024-01-15T10:00:01.000Z', {})
+      await injectLogLines(electronApp, [warnLine])
+      await waitForFlush(page)
+
+      // BEFORE: warn-only-message must NOT be in the error lane column (it is in unmatched)
+      const errorLaneBeforeTexts = await page
+        .locator(`${ERROR_LANE_SELECTOR} .log-row__message`)
+        .allTextContents()
+      const warnInErrorBefore = errorLaneBeforeTexts.some((t) => t.includes('warn-only-message'))
+      expect(warnInErrorBefore).toBe(false)
+
+      // Add "warn" as extra pattern to the error lane (first lane header)
+      const addBtn = page.locator('[data-testid="lane-header-add-pattern-btn"]').first()
+      await addBtn.click()
+      const addInput = page.locator('[data-testid="lane-header-add-pattern-input"]')
+      await addInput.fill('warn')
+      await addInput.press('Enter')
+
+      // Wait for reclassification + re-render
+      await waitForFlush(page)
+
+      // Chip should be visible confirming extra pattern was added
+      const chip = page.locator('[data-testid="lane-header-extra-chip"]')
+      await expect(chip).toHaveCount(1)
+      await expect(chip.first()).toContainText('warn')
+
+      // AFTER: warn-only-message must be in the error lane column (reclassified by OR logic)
+      const errorLaneAfterTexts = await page
+        .locator(`${ERROR_LANE_SELECTOR} .log-row__message`)
+        .allTextContents()
+      const warnInErrorAfter = errorLaneAfterTexts.some((t) => t.includes('warn-only-message'))
+      expect(warnInErrorAfter).toBe(true)
+    })
+
+    test('THEN removing the extra pattern chip reverts the warn entry classification', async () => {
+      // Inject the warn-only log line
+      const warnLine = createIpcLogLine('warn', 'warn-only-message', '2024-01-15T10:00:01.000Z', {})
+      await injectLogLines(electronApp, [warnLine])
+      await waitForFlush(page)
+
+      // Add "warn" as extra pattern to error lane
+      const addBtn = page.locator('[data-testid="lane-header-add-pattern-btn"]').first()
+      await addBtn.click()
+      const addInput = page.locator('[data-testid="lane-header-add-pattern-input"]')
+      await addInput.fill('warn')
+      await addInput.press('Enter')
+      await waitForFlush(page)
+
+      // Verify chip is present and warn entry is in error lane
+      await expect(page.locator('[data-testid="lane-header-extra-chip"]')).toHaveCount(1)
+      const textsAfterAdd = await page
+        .locator(`${ERROR_LANE_SELECTOR} .log-row__message`)
+        .allTextContents()
+      expect(textsAfterAdd.some((t) => t.includes('warn-only-message'))).toBe(true)
+
+      // Remove the chip
+      const removeBtn = page.locator('[data-testid="lane-header-extra-chip-remove"]').first()
+      await removeBtn.click()
+      await waitForFlush(page)
+
+      // Chip should be gone
+      await expect(page.locator('[data-testid="lane-header-extra-chip"]')).toHaveCount(0)
+
+      // AFTER removal: warn-only-message must NOT be in the error lane column (reclassified back to unmatched)
+      const textsAfterRemove = await page
+        .locator(`${ERROR_LANE_SELECTOR} .log-row__message`)
+        .allTextContents()
+      expect(textsAfterRemove.some((t) => t.includes('warn-only-message'))).toBe(false)
+    })
+  })
 })

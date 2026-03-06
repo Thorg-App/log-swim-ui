@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { DragEvent, KeyboardEvent, ChangeEvent } from 'react'
+import type { ExtraPatternEntry } from '@core/types'
 
 interface LaneHeaderProps {
   readonly pattern: string
@@ -7,6 +8,7 @@ interface LaneHeaderProps {
   readonly isUnmatched: boolean
   readonly caseSensitive: boolean
   readonly laneIndex: number
+  readonly extraPatterns?: readonly ExtraPatternEntry[]
   readonly onDragStart?: (index: number) => void
   readonly onDragOver?: (index: number) => void
   readonly onDrop?: (index: number) => void
@@ -15,7 +17,42 @@ interface LaneHeaderProps {
   readonly onEdit?: (newPattern: string) => void
   readonly onRemove?: () => void
   readonly onToggleCaseSensitivity?: () => void
+  readonly onAddLanePattern?: (pattern: string) => void
+  readonly onRemoveLaneExtraPattern?: (extraIndex: number) => void
 }
+
+// --- PatternChip (internal) ---
+// Presentational chip for an extra classification pattern.
+// Simpler than FilterChip: no toggle, no mode, no case sensitivity — purely a removable matcher.
+
+interface PatternChipProps {
+  readonly pattern: string
+  readonly isError: boolean
+  readonly onRemove: () => void
+}
+
+function PatternChip({ pattern, isError, onRemove }: PatternChipProps) {
+  const chipClass = isError
+    ? 'lane-header__extra-chip lane-header__extra-chip--error'
+    : 'lane-header__extra-chip'
+
+  return (
+    <span className={chipClass} data-testid="lane-header-extra-chip">
+      {pattern}
+      <span
+        className="lane-header__extra-chip__remove"
+        role="button"
+        aria-label={`Remove pattern ${pattern}`}
+        onClick={onRemove}
+        data-testid="lane-header-extra-chip-remove"
+      >
+        &times;
+      </span>
+    </span>
+  )
+}
+
+// --- LaneHeader ---
 
 /**
  * Header cell for a swimlane column.
@@ -26,6 +63,8 @@ interface LaneHeaderProps {
  * - Click pattern text to edit inline (Enter to confirm, Escape to cancel)
  * - x remove button to delete the lane
  * - Aa/aa toggle to switch case sensitivity
+ * - Extra pattern chips with × remove buttons
+ * - "+ Pattern" button to add extra classification patterns (inline input, Enter confirms, Escape/blur cancels)
  *
  * Drag-and-drop: the entire header div is the drag initiator AND drop target.
  * The ⠿ icon is a visual affordance hint only (not the drag handle).
@@ -37,6 +76,7 @@ function LaneHeader({
   isUnmatched,
   caseSensitive,
   laneIndex,
+  extraPatterns,
   onDragStart,
   onDragOver,
   onDrop,
@@ -44,19 +84,32 @@ function LaneHeader({
   isDragOver,
   onEdit,
   onRemove,
-  onToggleCaseSensitivity
+  onToggleCaseSensitivity,
+  onAddLanePattern,
+  onRemoveLaneExtraPattern
 }: LaneHeaderProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(pattern)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Focus input when entering edit mode
+  const [isAddingPattern, setIsAddingPattern] = useState(false)
+  const [addPatternValue, setAddPatternValue] = useState('')
+  const addPatternInputRef = useRef<HTMLInputElement>(null)
+
+  // Focus edit input when entering edit mode
   useEffect(() => {
     if (isEditing && inputRef.current !== null) {
       inputRef.current.focus()
       inputRef.current.select()
     }
   }, [isEditing])
+
+  // Focus add-pattern input when entering add-pattern mode
+  useEffect(() => {
+    if (isAddingPattern) {
+      addPatternInputRef.current?.focus()
+    }
+  }, [isAddingPattern])
 
   const handleStartEdit = useCallback(() => {
     if (isUnmatched) return
@@ -94,6 +147,37 @@ function LaneHeader({
     setEditValue(e.target.value)
   }, [])
 
+  const handleConfirmAddPattern = useCallback(() => {
+    const trimmed = addPatternValue.trim()
+    if (trimmed.length > 0) {
+      onAddLanePattern?.(trimmed)
+    }
+    setAddPatternValue('')
+    setIsAddingPattern(false)
+  }, [addPatternValue, onAddLanePattern])
+
+  const handleCancelAddPattern = useCallback(() => {
+    setAddPatternValue('')
+    setIsAddingPattern(false)
+  }, [])
+
+  const handleAddPatternKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleConfirmAddPattern()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        handleCancelAddPattern()
+      }
+    },
+    [handleConfirmAddPattern, handleCancelAddPattern]
+  )
+
+  const handleAddPatternChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setAddPatternValue(e.target.value)
+  }, [])
+
   const classNames = ['lane-header']
   if (isError) classNames.push('lane-header--error')
   if (isUnmatched) classNames.push('lane-header--unmatched')
@@ -101,6 +185,9 @@ function LaneHeader({
 
   const displayText = isUnmatched ? 'unmatched' : pattern
   const isDraggable = !isUnmatched
+  // WHY: suppress draggable while editing or adding a pattern to prevent accidental
+  // lane drag when the user is focused on typing inside the lane header.
+  const dragActive = isDraggable && !isEditing && !isAddingPattern
 
   function handleDragStart(e: DragEvent<HTMLDivElement>): void {
     e.dataTransfer.effectAllowed = 'move'
@@ -126,9 +213,9 @@ function LaneHeader({
   return (
     <div
       className={classNames.join(' ')}
-      draggable={isDraggable && !isEditing ? true : undefined}
-      onDragStart={isDraggable && !isEditing ? handleDragStart : undefined}
-      onDragEnd={isDraggable && !isEditing ? handleDragEnd : undefined}
+      draggable={dragActive ? true : undefined}
+      onDragStart={dragActive ? handleDragStart : undefined}
+      onDragEnd={dragActive ? handleDragEnd : undefined}
       onDragOver={isDraggable ? handleDragOver : undefined}
       onDrop={isDraggable ? handleDrop : undefined}
     >
@@ -165,6 +252,52 @@ function LaneHeader({
         >
           {displayText}
         </span>
+      )}
+
+      {/* Extra pattern chips (not on unmatched lane) */}
+      {!isUnmatched && (
+        <div className="lane-header__extra-patterns">
+          {(extraPatterns ?? []).map((ep, i) => (
+            <PatternChip
+              key={i}
+              pattern={ep.pattern}
+              isError={ep.isError}
+              onRemove={() => onRemoveLaneExtraPattern?.(i)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Add pattern inline form or + Pattern button (not on unmatched lane) */}
+      {!isUnmatched && (
+        isAddingPattern ? (
+          <div className="lane-header__add-form">
+            <input
+              ref={addPatternInputRef}
+              className="lane-header__add-input"
+              type="text"
+              value={addPatternValue}
+              placeholder="regex pattern"
+              onChange={handleAddPatternChange}
+              onKeyDown={handleAddPatternKeyDown}
+              // WHY: blur cancels (not confirms) to avoid unintended submission when the
+              // user clicks the Aa toggle or chip remove while the input is focused.
+              // onBlur fires before onClick in DOM event order, so blur-confirms would
+              // silently submit partial text before the clicked button action runs.
+              onBlur={handleCancelAddPattern}
+              data-testid="lane-header-add-pattern-input"
+            />
+          </div>
+        ) : (
+          <button
+            className="filter-add-btn"
+            type="button"
+            onClick={() => setIsAddingPattern(true)}
+            data-testid="lane-header-add-pattern-btn"
+          >
+            + Pattern
+          </button>
+        )
       )}
 
       {/* Case sensitivity toggle (not on unmatched) */}
