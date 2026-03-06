@@ -1,11 +1,11 @@
 ---
 id: wmtjnten6eiw5repedjlu2tig
 title: "change input key names"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-01T14:28:47Z
-status_updated_iso: 2026-03-01T14:28:47Z
+status_updated_iso: 2026-03-06T23:43:00Z
 type: task
 priority: 0
 assignee: nickolaykondratyev
