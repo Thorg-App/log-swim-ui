@@ -2,7 +2,12 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import '../theme/tokens.css'
 import '../theme/components.css'
 import type { AppConfig, LaneDefinition } from '@core/types'
-import { createLaneDefinition } from '@core/types'
+import {
+  createLaneDefinition,
+  addExtraPatternToLane,
+  removeExtraPatternFromLane,
+  rebuildLaneDefinition
+} from '@core/types'
 import { MasterList } from '@core/master-list'
 import { LaneClassifier } from '@core/lane-classifier'
 import type { Filter } from '@core/filter'
@@ -120,7 +125,9 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
     (index: number, newPattern: string) => {
       const existing = lanes[index]
       if (existing === undefined) return
-      const newLane = createLaneDefinition(newPattern, { caseSensitive: existing.caseSensitive })
+      // WHY: rebuildLaneDefinition preserves extraPatterns when the primary pattern is edited.
+      // Using createLaneDefinition here would silently drop all extra patterns.
+      const newLane = rebuildLaneDefinition(newPattern, existing, existing.caseSensitive)
       const newLanes = [...lanes]
       newLanes[index] = newLane
       applyLaneChange(newLanes)
@@ -140,9 +147,36 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
     (index: number) => {
       const existing = lanes[index]
       if (existing === undefined) return
-      const newLane = createLaneDefinition(existing.pattern, { caseSensitive: !existing.caseSensitive })
+      // WHY: rebuildLaneDefinition preserves extraPatterns and recompiles all regexes
+      // with the toggled caseSensitive flag. Using createLaneDefinition here would
+      // silently drop all extra patterns.
+      const newLane = rebuildLaneDefinition(existing.pattern, existing, !existing.caseSensitive)
       const newLanes = [...lanes]
       newLanes[index] = newLane
+      applyLaneChange(newLanes)
+    },
+    [lanes, applyLaneChange]
+  )
+
+  const handleAddLanePattern = useCallback(
+    (laneIndex: number, pattern: string) => {
+      const existing = lanes[laneIndex]
+      if (existing === undefined || pattern.trim().length === 0) return
+      const newLane = addExtraPatternToLane(existing, pattern.trim())
+      const newLanes = [...lanes]
+      newLanes[laneIndex] = newLane
+      applyLaneChange(newLanes)
+    },
+    [lanes, applyLaneChange]
+  )
+
+  const handleRemoveLaneExtraPattern = useCallback(
+    (laneIndex: number, extraIndex: number) => {
+      const existing = lanes[laneIndex]
+      if (existing === undefined) return
+      const newLane = removeExtraPatternFromLane(existing, extraIndex)
+      const newLanes = [...lanes]
+      newLanes[laneIndex] = newLane
       applyLaneChange(newLanes)
     },
     [lanes, applyLaneChange]
@@ -271,6 +305,8 @@ function AppShell({ config: initConfig, initialLanes, masterList }: AppShellProp
             onEditLane={handleEditLane}
             onRemoveLane={handleRemoveLane}
             onToggleLaneCaseSensitivity={handleToggleLaneCaseSensitivity}
+            onAddLanePattern={handleAddLanePattern}
+            onRemoveLaneExtraPattern={handleRemoveLaneExtraPattern}
           />
         </div>
         {unparseableEntries.length > 0 && (

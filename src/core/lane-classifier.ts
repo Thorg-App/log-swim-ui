@@ -13,7 +13,11 @@ class LaneClassifier {
   static classify(rawJson: string, lanes: readonly LaneDefinition[]): number {
     for (let i = 0; i < lanes.length; i++) {
       const lane = lanes[i]
-      if (lane.regex !== null && lane.regex.test(rawJson)) {
+      const primaryMatches = lane.regex !== null && lane.regex.test(rawJson)
+      const extraMatches = lane.extraPatterns.some(
+        (ep) => ep.regex !== null && ep.regex.test(rawJson)
+      )
+      if (primaryMatches || extraMatches) {
         return i
       }
     }

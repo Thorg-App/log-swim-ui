@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { LaneClassifier } from '@core/lane-classifier'
-import { createLaneDefinition } from '@core/types'
+import { createLaneDefinition, addExtraPatternToLane } from '@core/types'
 import type { LogEntry } from '@core/types'
 
 /**
@@ -104,6 +104,62 @@ describe('LaneClassifier.classify with case-insensitive lanes', () => {
         const lanes = [createLaneDefinition('error', { caseSensitive: true })]
         const result = LaneClassifier.classify('{"level":"ERROR","msg":"FAIL"}', lanes)
         expect(result).toBe(lanes.length)
+      })
+    })
+  })
+})
+
+describe('LaneClassifier.classify with extra patterns (OR logic)', () => {
+  describe('GIVEN a lane with primary pattern "error" and extra pattern "fatal"', () => {
+    describe('WHEN classify is called with JSON containing only "fatal"', () => {
+      it('THEN returns index 0 (matched via extra pattern)', () => {
+        const lane = addExtraPatternToLane(createLaneDefinition('error'), 'fatal')
+        const result = LaneClassifier.classify('{"level":"fatal","msg":"crash"}', [lane])
+        expect(result).toBe(0)
+      })
+    })
+
+    describe('WHEN classify is called with JSON containing "error"', () => {
+      it('THEN returns index 0 (matched via primary pattern)', () => {
+        const lane = addExtraPatternToLane(createLaneDefinition('error'), 'fatal')
+        const result = LaneClassifier.classify('{"level":"error","msg":"fail"}', [lane])
+        expect(result).toBe(0)
+      })
+    })
+
+    describe('WHEN classify is called with JSON containing neither', () => {
+      it('THEN returns lanes.length (unmatched)', () => {
+        const lane = addExtraPatternToLane(createLaneDefinition('error'), 'fatal')
+        const lanes = [lane]
+        const result = LaneClassifier.classify('{"level":"info","msg":"ok"}', lanes)
+        expect(result).toBe(lanes.length)
+      })
+    })
+  })
+
+  describe('GIVEN a lane with an invalid extra pattern (isError: true, regex: null)', () => {
+    describe('WHEN classify is called', () => {
+      it('THEN the invalid extra pattern is skipped without throwing', () => {
+        const lane = addExtraPatternToLane(createLaneDefinition('error'), '[invalid')
+        // The invalid extra pattern should not throw; primary pattern "error" still works
+        expect(() => LaneClassifier.classify('{"level":"error"}', [lane])).not.toThrow()
+      })
+
+      it('THEN match still works via the valid primary pattern', () => {
+        const lane = addExtraPatternToLane(createLaneDefinition('error'), '[invalid')
+        const result = LaneClassifier.classify('{"level":"error"}', [lane])
+        expect(result).toBe(0)
+      })
+    })
+  })
+
+  describe('GIVEN two lanes where lane 0 has extra pattern "auth" and lane 1 has primary pattern "auth"', () => {
+    describe('WHEN classify is called with JSON containing "auth"', () => {
+      it('THEN returns 0 (first-match-wins across lanes still holds)', () => {
+        const lane0 = addExtraPatternToLane(createLaneDefinition('error'), 'auth')
+        const lane1 = createLaneDefinition('auth')
+        const result = LaneClassifier.classify('{"msg":"auth login"}', [lane0, lane1])
+        expect(result).toBe(0)
       })
     })
   })

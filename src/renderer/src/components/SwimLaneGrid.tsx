@@ -25,6 +25,8 @@ interface SwimLaneGridProps {
   readonly onEditLane: (index: number, newPattern: string) => void
   readonly onRemoveLane: (index: number) => void
   readonly onToggleLaneCaseSensitivity: (index: number) => void
+  readonly onAddLanePattern: (laneIndex: number, pattern: string) => void
+  readonly onRemoveLaneExtraPattern: (laneIndex: number, extraIndex: number) => void
 }
 
 /**
@@ -47,7 +49,9 @@ function SwimLaneGrid({
   onReorderLanes,
   onEditLane,
   onRemoveLane,
-  onToggleLaneCaseSensitivity
+  onToggleLaneCaseSensitivity,
+  onAddLanePattern,
+  onRemoveLaneExtraPattern
 }: SwimLaneGridProps) {
   const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -162,6 +166,7 @@ function SwimLaneGrid({
           isError={lane.isError}
           isUnmatched={false}
           caseSensitive={lane.caseSensitive}
+          extraPatterns={lane.extraPatterns}
           laneIndex={i}
           onDragStart={handleLaneDragStart}
           onDragOver={handleLaneDragOver}
@@ -171,6 +176,8 @@ function SwimLaneGrid({
           onEdit={(newPattern) => onEditLane(i, newPattern)}
           onRemove={() => onRemoveLane(i)}
           onToggleCaseSensitivity={() => onToggleLaneCaseSensitivity(i)}
+          onAddLanePattern={(pattern) => onAddLanePattern(i, pattern)}
+          onRemoveLaneExtraPattern={(extraIdx) => onRemoveLaneExtraPattern(i, extraIdx)}
         />
       ))}
       {/* Unmatched lane header (always last) */}
