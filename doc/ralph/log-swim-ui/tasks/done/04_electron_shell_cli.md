@@ -10,9 +10,9 @@ Wire up the Electron main process with CLI argument parsing, config file managem
 ## Scope
 ### In Scope
 - Implement CLI argument parser (`src/main/cli-parser.ts`):
-  - `--key-level <field>` — required
-  - `--key-timestamp <field>` — required
-  - `--lanes <regex1> <regex2> ...` — optional (all values until next `--` flag)
+  - `--input_key.level <field>` — required
+  - `--input_key.timestamp <field>` — required
+  - `--regexes_for_filter_columns <regex1> <regex2> ...` — optional (all values until next `--` flag)
   - Validate required args present; print usage + exit 1 if missing
   - Parse lane regexes into `LaneDefinition[]` (using `LaneClassifier` from Phase 03)
 - Implement config manager (`src/main/config-manager.ts`):
@@ -58,19 +58,19 @@ Wire up the Electron main process with CLI argument parsing, config file managem
 Use a simple hand-rolled parser (no external CLI library needed for 3 args):
 ```typescript
 interface CliArgs {
-  keyLevel: string;
-  keyTimestamp: string;
-  lanePatterns: string[];
+  inputKeyLevel: string;
+  inputKeyTimestamp: string;
+  filterColumnPatterns: string[];
 }
 ```
 
 Usage message on error:
 ```
 Usage:
-  cat logs.json | log-swim-ui --key-level <field> --key-timestamp <field> [--lanes <regex> ...]
+  cat logs.json | log-swim-ui --input_key.level <field> --input_key.timestamp <field> [--regexes_for_filter_columns <regex> ...]
 
 Example:
-  kubectl logs my-pod | log-swim-ui --key-level level --key-timestamp timestamp --lanes "error|ERROR|fatal" "auth"
+  kubectl logs my-pod | log-swim-ui --input_key.level level --input_key.timestamp timestamp --regexes_for_filter_columns "error|ERROR|fatal" "auth"
 ```
 
 ### Config Manager
@@ -99,7 +99,7 @@ StdinReader
 - Whitelist specific channels
 
 ## Acceptance Criteria
-- [ ] `log-swim-ui --key-level level --key-timestamp timestamp` launches with piped stdin
+- [ ] `log-swim-ui --input_key.level level --input_key.timestamp timestamp` launches with piped stdin
 - [ ] Missing required args prints usage and exits with code 1
 - [ ] No stdin pipe prints help and exits with code 1
 - [ ] Config file created with defaults if missing

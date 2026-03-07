@@ -26,12 +26,12 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 ## User-Facing Behavior
 
 - **Behavior: Normal log ingestion**
-  - GIVEN the app is launched with `--key-level` and `--key-timestamp` and piped stdin
+  - GIVEN the app is launched with `--input_key.level` and `--input_key.timestamp` and piped stdin
   - WHEN JSON log lines arrive
   - THEN each line is classified into the first matching lane (or "unmatched") and displayed
 
 - **Behavior: Start without lanes**
-  - GIVEN the app is launched without `--lanes`
+  - GIVEN the app is launched without `--regexes_for_filter_columns`
   - WHEN logs arrive
   - THEN all logs appear in the "unmatched" lane
   - AND user can add lanes via the UI
@@ -149,8 +149,8 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | Virtualization | @tanstack/virtual | Proven library for virtualizing large lists |
 | Styling | CSS custom properties (tokens) | Clean separation of theme from components |
 | Lane definition format | Regex-only (no names) | Simplicity — lane headers show the regex pattern |
-| CLI required args | `--key-level`, `--key-timestamp` | Explicit is better than implicit; no guessing field names |
-| CLI optional args | `--lanes` | Start with just "unmatched", add lanes via UI |
+| CLI required args | `--input_key.level`, `--input_key.timestamp` | Explicit is better than implicit; no guessing field names |
+| CLI optional args | `--regexes_for_filter_columns` | Start with just "unmatched", add lanes via UI |
 | Eviction strategy | Evict oldest, configurable max (default 20K) | Rolling window — always see latest logs |
 | Timestamp display | `viewTimestampFormat`: iso, local, relative | "relative" = relative to first log entry received |
 | Unrecognized log level color | Orange (`#F97316`) | High visibility for unexpected values |
@@ -170,7 +170,7 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 | `IpcLogLine` | Parsed line sent via IPC (main→renderer) | `src/core/types.ts` | `rawJson, fields, timestamp, level` |
 | `IPC_CHANNELS` | IPC channel name constants | `src/core/types.ts` | `LOG_LINE, STREAM_END, STREAM_ERROR, CONFIG_ERROR, GET_CONFIG, SAVE_CONFIG, GET_CLI_ARGS, RESET_CONFIG` |
 | `ElectronApi` | Preload bridge contract (exposed on `window.api`) | `src/core/types.ts` | `onLogLine, onStreamEnd, onStreamError, onConfigError` (push: return `() => void` unsubscribe), `getConfig, saveConfig, resetConfig, getCliArgs` (request/response) |
-| `CliArgsResult` | Parsed CLI args shape | `src/core/types.ts` | `keyLevel, keyTimestamp, lanePatterns` |
+| `CliArgsResult` | Parsed CLI args shape | `src/core/types.ts` | `inputKeyLevel, inputKeyTimestamp, filterColumnPatterns` |
 | `StdinReaderHandle` | Stoppable stdin reader handle | `src/core/stdin-reader.ts` | `stop()` |
 | `KNOWN_LOG_LEVELS` | Canonical list of recognized log level names | `src/core/types.ts` | 9 levels: trace, debug, info, notice, warn, warning, error, fatal, critical |
 | `KnownLogLevel` | Union type derived from `KNOWN_LOG_LEVELS` | `src/core/types.ts` | `'trace' \| 'debug' \| ... \| 'critical'` |
@@ -198,7 +198,7 @@ An Electron desktop app (macOS/Linux) that reads line-delimited JSON from stdin 
 
 | Class | Kind | Location | Purpose |
 |-------|------|----------|---------|
-| `CliParser` | static | `src/main/cli-parser.ts` | Parse `--key-level`, `--key-timestamp`, `--lanes` from argv. Throws `CliValidationError`. |
+| `CliParser` | static | `src/main/cli-parser.ts` | Parse `--input_key.level`, `--input_key.timestamp`, `--regexes_for_filter_columns` from argv. Throws `CliValidationError`. |
 | `ConfigManager` | static | `src/main/config-manager.ts` | Load, validate, deep merge, save, and reset `config.json`. Falls back to defaults on invalid config. |
 | `ConfigValidator` | static | `src/main/config-manager.ts` | Validate raw config JSON structure and values. Returns error list. |
 | `IpcBridge` | stateful | `src/main/ipc-bridge.ts` | Stdin → JsonParser → TimestampDetector → IPC send pipeline. Halts on first-line errors. |
@@ -284,7 +284,7 @@ stdin → line-by-line read → JSON parse (skip malformed with warning)
 None — this is a greenfield project with no existing behaviors.
 
 ## Success Criteria
-- [ ] App launches via `cat logs.json | log-swim-ui --key-level level --key-timestamp timestamp`
+- [ ] App launches via `cat logs.json | log-swim-ui --input_key.level level --input_key.timestamp timestamp`
 - [ ] Logs are classified into regex-defined lanes (first match wins)
 - [ ] Unmatched logs appear in the "unmatched" lane
 - [ ] Live mode auto-scrolls; Scroll mode freezes on user scroll-up
@@ -321,20 +321,20 @@ See individual task file(s) in `./tasks/todo/` (pending) or `./tasks/done/` (com
 
 ### Invocation
 ```bash
-cat logs.json | log-swim-ui --key-level level --key-timestamp timestamp
-cat logs.json | log-swim-ui --key-level level --key-timestamp timestamp --lanes "error|ERROR|fatal" "auth"
-kubectl logs my-pod | log-swim-ui --key-level level --key-timestamp ts --lanes "error|ERROR" "timeout"
+cat logs.json | log-swim-ui --input_key.level level --input_key.timestamp timestamp
+cat logs.json | log-swim-ui --input_key.level level --input_key.timestamp timestamp --regexes_for_filter_columns "error|ERROR|fatal" "auth"
+kubectl logs my-pod | log-swim-ui --input_key.level level --input_key.timestamp ts --regexes_for_filter_columns "error|ERROR" "timeout"
 ```
 
 ### Arguments
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `--key-level` | Yes | JSON field name to read log level from |
-| `--key-timestamp` | Yes | JSON field name to read timestamp from |
-| `--lanes` | No | One or more regex patterns defining lanes. Without this, only "unmatched" lane exists. |
+| `--input_key.level` | Yes | JSON field name to read log level from |
+| `--input_key.timestamp` | Yes | JSON field name to read timestamp from |
+| `--regexes_for_filter_columns` | No | One or more regex patterns defining lanes. Without this, only "unmatched" lane exists. |
 
 ### Lane Behavior
-- Each `--lanes` value is a regex pattern (no names, no `::` separator)
+- Each `--regexes_for_filter_columns` value is a regex pattern (no names, no `::` separator)
 - Regex matched case-sensitively against the full raw JSON string
 - Lanes evaluated left-to-right, first match wins
 - Implicit "unmatched" lane always exists as the last lane

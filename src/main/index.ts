@@ -23,11 +23,11 @@ if (!isE2eTest && process.stdin.isTTY) {
 // WHY: When launched via Playwright, process.argv contains Chromium flags (--no-sandbox,
 // --disable-gpu, etc.) and the app entry path as a positional arg. Playwright's loader removes
 // --inspect and --remote-debugging-port, but other flags and the app path remain.
-// We extract only the known app flags (--key-level, --key-timestamp, --lanes) by finding
+// We extract only the known app flags (--input_key.level, --input_key.timestamp, --regexes_for_filter_columns) by finding
 // the first known app flag and taking everything from there.
 
 function extractAppArgs(argv: readonly string[]): string[] {
-  const APP_FLAGS = ['--key-level', '--key-timestamp', '--lanes']
+  const APP_FLAGS = ['--input_key.level', '--input_key.timestamp', '--regexes_for_filter_columns']
   const firstAppFlagIndex = argv.findIndex((arg) =>
     APP_FLAGS.some((flag) => arg === flag)
   )
@@ -87,9 +87,9 @@ app.whenReady().then(async () => {
   ipcMain.handle(IPC_CHANNELS.SAVE_CONFIG, (_event, config) => configManager.save(config))
   ipcMain.handle(IPC_CHANNELS.RESET_CONFIG, async () => configManager.reset())
   ipcMain.handle(IPC_CHANNELS.GET_CLI_ARGS, () => ({
-    keyLevel: cliArgs.keyLevel,
-    keyTimestamp: cliArgs.keyTimestamp,
-    lanePatterns: cliArgs.lanePatterns
+    inputKeyLevel: cliArgs.inputKeyLevel,
+    inputKeyTimestamp: cliArgs.inputKeyTimestamp,
+    filterColumnPatterns: cliArgs.filterColumnPatterns
   }))
 
   // Wait for window to finish loading before starting IPC bridge
@@ -142,8 +142,8 @@ app.whenReady().then(async () => {
 
       // Start the IPC bridge (stdin -> parse -> IPC to renderer)
       const bridge = new IpcBridge({
-        keyLevel: cliArgs.keyLevel,
-        keyTimestamp: cliArgs.keyTimestamp,
+        inputKeyLevel: cliArgs.inputKeyLevel,
+        inputKeyTimestamp: cliArgs.inputKeyTimestamp,
         sender: mainWindow.webContents
       })
       bridge.start(process.stdin)

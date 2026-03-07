@@ -46,7 +46,7 @@ function useAppInit(): InitResult {
 
         applyConfigToCSS(config)
 
-        const lanes = cliArgs.lanePatterns.map((pattern) => createLaneDefinition(pattern))
+        const lanes = cliArgs.filterColumnPatterns.map((pattern) => createLaneDefinition(pattern))
         const masterList = new MasterList(config.performance.maxLogEntries)
 
         setResult({ status: 'ready', config, lanes, masterList })
