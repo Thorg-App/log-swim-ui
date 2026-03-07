@@ -39,8 +39,8 @@ npx playwright install
 ## Usage (not yet implemented)
 
 ```bash
-cat logs.json | log-swim-ui --key-level level --key-timestamp timestamp
-cat logs.json | log-swim-ui --key-level level --key-timestamp timestamp --lanes "error|ERROR|fatal" "auth"
+cat logs.json | log-swim-ui --input_key.level level --input_key.timestamp timestamp
+cat logs.json | log-swim-ui --input_key.level level --input_key.timestamp timestamp --regexes_for_filter_columns "error|ERROR|fatal" "auth"
 ```
 
 ## Project Structure

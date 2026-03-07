@@ -11,9 +11,9 @@ import {
 // --- Shared Test Data ---
 
 const DEFAULT_CLI_ARGS = [
-  '--key-level', 'level',
-  '--key-timestamp', 'timestamp',
-  '--lanes', 'error', 'auth'
+  '--input_key.level', 'level',
+  '--input_key.timestamp', 'timestamp',
+  '--regexes_for_filter_columns', 'error', 'auth'
 ]
 
 const SAMPLE_LOG_LINES = [
@@ -26,7 +26,7 @@ const SAMPLE_LOG_LINES = [
 
 // --- Tests ---
 
-test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () => {
+test.describe('GIVEN the Electron app launched with --regexes_for_filter_columns "error" "auth"', () => {
   let electronApp: ElectronApplication
   let page: Page
 
@@ -381,7 +381,7 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
 
     test('THEN the "+ Pattern" button is visible on each non-unmatched lane header', async () => {
       const addPatternBtns = page.locator('[data-testid="lane-header-add-pattern-btn"]')
-      // With --lanes error auth, there are 2 non-unmatched lanes
+      // With --regexes_for_filter_columns error auth, there are 2 non-unmatched lanes
       await expect(addPatternBtns).toHaveCount(2)
     })
 
@@ -453,14 +453,14 @@ test.describe('GIVEN the Electron app launched with --lanes "error" "auth"', () 
 // --- Extra Pattern OR Logic E2E Tests ---
 // Uses a single-lane setup to directly verify OR classification routing.
 
-test.describe('GIVEN the Electron app launched with --lanes "error" (single lane)', () => {
+test.describe('GIVEN the Electron app launched with --regexes_for_filter_columns "error" (single lane)', () => {
   let electronApp: ElectronApplication
   let page: Page
 
   const SINGLE_LANE_CLI_ARGS = [
-    '--key-level', 'level',
-    '--key-timestamp', 'timestamp',
-    '--lanes', 'error'
+    '--input_key.level', 'level',
+    '--input_key.timestamp', 'timestamp',
+    '--regexes_for_filter_columns', 'error'
   ]
 
   test.beforeEach(async () => {

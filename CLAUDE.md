@@ -196,7 +196,7 @@ describe('GIVEN a log entry with level "error"', () => {
 src/
   main/          # Electron main process (Node.js context)
                  # - index.ts: App startup orchestration (TTY check, CLI parse, config load, IPC handlers, RENDERER_READY handshake, bridge start, E2E test seam)
-                 # - cli-parser.ts: CliParser (static) -- parse --key-level, --key-timestamp, --lanes
+                 # - cli-parser.ts: CliParser (static) -- parse --input_key.level, --input_key.timestamp, --regexes_for_filter_columns
                  # - config-manager.ts: ConfigManager (static) -- load/validate/merge/save/reset config, ConfigValidator (static)
                  # - ipc-bridge.ts: IpcBridge -- stdin → JsonParser → TimestampDetector → IPC send pipeline
   preload/       # Preload scripts (bridge between main and renderer)

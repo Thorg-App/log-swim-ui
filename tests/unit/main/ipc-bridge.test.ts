@@ -60,8 +60,8 @@ function createValidJsonLine(level = 'info', message = 'test message'): string {
  */
 async function processLines(
   lines: string[],
-  keyLevel = 'level',
-  keyTimestamp = 'timestamp'
+  inputKeyLevel = 'level',
+  inputKeyTimestamp = 'timestamp'
 ): Promise<{
   logLines: IpcLogLine[]
   errors: string[]
@@ -69,8 +69,8 @@ async function processLines(
 }> {
   const sender = createMockSender()
   const bridge = new IpcBridge({
-    keyLevel,
-    keyTimestamp,
+    inputKeyLevel,
+    inputKeyTimestamp,
     sender
   })
 

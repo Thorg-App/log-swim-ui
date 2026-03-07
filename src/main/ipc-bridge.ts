@@ -28,8 +28,8 @@ interface IpcSender {
 // --- IPC Bridge Dependencies ---
 
 interface IpcBridgeDeps {
-  readonly keyLevel: string
-  readonly keyTimestamp: string
+  readonly inputKeyLevel: string
+  readonly inputKeyTimestamp: string
   readonly sender: IpcSender
 }
 
@@ -107,7 +107,7 @@ class IpcBridge {
       return
     }
 
-    const timestampValue = parsed.fields[this.deps.keyTimestamp]
+    const timestampValue = parsed.fields[this.deps.inputKeyTimestamp]
 
     if (this.firstLine) {
       this.firstLine = false
@@ -133,7 +133,7 @@ class IpcBridge {
     // If parse fails, timestamp stays 0 (unparseable)
 
     // Extract level
-    const level = String(parsed.fields[this.deps.keyLevel] ?? 'unknown')
+    const level = String(parsed.fields[this.deps.inputKeyLevel] ?? 'unknown')
 
     const ipcLine: IpcLogLine = {
       rawJson: parsed.rawJson,

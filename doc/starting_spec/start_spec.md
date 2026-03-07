@@ -18,23 +18,23 @@
 ### Invocation
 
 ```bash
-cat logs.json | log-swim-ui --lanes "errors::error|ERROR|fatal" "auth" "timeout::timed?\s*out"
+cat logs.json | log-swim-ui --regexes_for_filter_columns "errors::error|ERROR|fatal" "auth" "timeout::timed?\s*out"
 ```
 
 ```bash
 kubectl logs my-pod | log-swim-ui \
-  --key-level level \
-  --key-timestamp timestamp \
-  --lanes "errors::error|ERROR|fatal" "auth"
+  --input_key.level level \
+  --input_key.timestamp timestamp \
+  --regexes_for_filter_columns "errors::error|ERROR|fatal" "auth"
 ```
 
 ### Arguments
 
 | Argument | Required | Default | Description |
 |---|---|---|---|
-| `--lanes` | Yes | — | One or more lane definitions (see format below). All values after `--lanes` until next flag are consumed as lane args |
-| `--key-level` | No | `level` | JSON field name to read log level from |
-| `--key-timestamp` | No | `timestamp` | JSON field name to read timestamp from |
+| `--regexes_for_filter_columns` | Yes | — | One or more lane definitions (see format below). All values after `--regexes_for_filter_columns` until next flag are consumed as lane args |
+| `--input_key.level` | No | `level` | JSON field name to read log level from |
+| `--input_key.timestamp` | No | `timestamp` | JSON field name to read timestamp from |
 
 ### Lane Definition Format
 
@@ -59,7 +59,7 @@ NAME
 ### Examples
 
 ```bash
---lanes "errors::error|ERROR|fatal" "auth" "db::postgres|mysql|query"
+--regexes_for_filter_columns "errors::error|ERROR|fatal" "auth" "db::postgres|mysql|query"
 ```
 
 - Lane `errors` → regex `error|ERROR|fatal`
@@ -77,10 +77,10 @@ NAME
   Error: log-swim-ui requires piped input. No stdin pipe detected.
 
   Usage:
-    cat logs.json | log-swim-ui --lanes "name::regex" [--key-level field] [--key-timestamp field]
+    cat logs.json | log-swim-ui --regexes_for_filter_columns "name::regex" [--input_key.level field] [--input_key.timestamp field]
 
   Example:
-    kubectl logs my-pod | log-swim-ui --lanes "errors::error|fatal" "auth"
+    kubectl logs my-pod | log-swim-ui --regexes_for_filter_columns "errors::error|fatal" "auth"
   ```
 - Error printed to **stderr** and shown in **UI error state** if the window has opened
 - App exits with code 1
@@ -124,7 +124,7 @@ Timestamp format is expected to be **consistent across all log lines**. The app 
 
 ## 6. Log Level Colorization
 
-Read from the field specified by `--key-level` (default: `level`). Matching is **case insensitive**.
+Read from the field specified by `--input_key.level` (default: `level`). Matching is **case insensitive**.
 
 | Level value(s) | Left border color | Hex |
 |---|---|---|
@@ -290,7 +290,7 @@ Classification is done once per log entry at insert time and stored on the entry
 
 Each visible log row contains:
 
-- **Left border** — colored by log level (from `--key-level` field)
+- **Left border** — colored by log level (from `--input_key.level` field)
 - **Timestamp** — formatted per `config.ui.timestampFormat`
 - **Message preview** — truncated to fit row height, from `message` field if present, else raw JSON
 - **Click to expand** — expands row inline to show full pretty-printed JSON

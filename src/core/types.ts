@@ -147,7 +147,7 @@ interface IpcLogLine {
   readonly rawJson: string
   readonly fields: Record<string, unknown>
   readonly timestamp: number // epoch millis; 0 = unparseable
-  readonly level: string // extracted via --key-level; 'unknown' if missing
+  readonly level: string // extracted via --input_key.level; 'unknown' if missing
 }
 
 // --- IPC Channels (centralized channel name constants) ---
@@ -188,9 +188,9 @@ interface ElectronApi {
 }
 
 interface CliArgsResult {
-  readonly keyLevel: string
-  readonly keyTimestamp: string
-  readonly lanePatterns: readonly string[]
+  readonly inputKeyLevel: string
+  readonly inputKeyTimestamp: string
+  readonly filterColumnPatterns: readonly string[]
 }
 
 // --- AppConfig ---
